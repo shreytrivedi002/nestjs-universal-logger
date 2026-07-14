@@ -1,0 +1,41 @@
+import { Model } from 'mongoose';
+import { LogEntry, LogQuery, UniversalLoggerConfig } from '../interfaces/config.interface';
+export declare class UniversalLoggerStandalone {
+    private readonly winstonLogger;
+    private readonly config;
+    private readonly serviceName;
+    private readonly environment;
+    private readonly version;
+    private readonly logModel;
+    constructor(logModel: Model<LogEntry>, config: UniversalLoggerConfig, serviceName?: string, environment?: string, version?: string);
+    private createTransports;
+    log(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    error(message: string, trace?: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    warn(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    debug(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    verbose(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    logApiCall(req: any, res: any, duration: number, statusCode: number): Promise<void>;
+    logPerformance(operation: string, duration: number, metadata?: Record<string, any>): Promise<void>;
+    logDatabaseQuery(query: string, duration: number, table?: string, operation?: string): Promise<void>;
+    logExternalCall(url: string, method: string, duration: number, statusCode: number, response?: any): Promise<void>;
+    logSecurity(event: string, metadata?: Record<string, any>): Promise<void>;
+    logAuthEvent(event: string, userId?: string, success?: boolean, metadata?: Record<string, any>): Promise<void>;
+    logBusinessLogic(operation: string, data: any, context?: string): Promise<void>;
+    logUserAction(action: string, userId: string, metadata?: Record<string, any>): Promise<void>;
+    logFeatureUsage(feature: string, userId?: string, metadata?: Record<string, any>): Promise<void>;
+    logSystemMetrics(): Promise<void>;
+    getLogs(query: LogQuery): Promise<LogEntry[]>;
+    getLogStats(timeRange: {
+        start: Date;
+        end: Date;
+    }): Promise<any>;
+    getErrorTrends(days?: number): Promise<any>;
+    getTopErrors(limit?: number, days?: number): Promise<any>;
+    getPerformanceMetrics(hours?: number): Promise<any>;
+    cleanupOldLogs(daysToKeep?: number): Promise<number>;
+    private createLogEntry;
+    private getSeverityLevel;
+    private sanitizeHeaders;
+    private isBodyLoggable;
+    private getResponseBody;
+}

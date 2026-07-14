@@ -1,0 +1,40 @@
+import { LoggerService as NestLoggerService } from '@nestjs/common';
+import { Model } from 'mongoose';
+import { LogEntry, LogQuery } from './interfaces/config.interface';
+import { UniversalLoggerConfig } from './universal-logger.config';
+export declare class UniversalLoggerService implements NestLoggerService {
+    private readonly logModel;
+    private readonly winstonLogger;
+    private readonly config;
+    private readonly serviceName;
+    private readonly environment;
+    private readonly version;
+    constructor(logModel: Model<LogEntry>, config: UniversalLoggerConfig);
+    private createTransports;
+    private createLogEntry;
+    private getSeverityLevel;
+    log(message: string, context?: string, metadata?: Record<string, any>): void;
+    error(message: string, trace?: string, context?: string, metadata?: Record<string, any>): void;
+    warn(message: string, context?: string, metadata?: Record<string, any>): void;
+    debug(message: string, context?: string, metadata?: Record<string, any>): void;
+    verbose(message: string, context?: string, metadata?: Record<string, any>): void;
+    logApiCall(req: any, res: any, duration: number, statusCode: number): void;
+    logPerformance(operation: string, duration: number, metadata?: Record<string, any>): void;
+    logDatabaseQuery(query: string, duration: number, table?: string, operation?: string): void;
+    logExternalCall(url: string, method: string, duration: number, statusCode: number, response?: any): void;
+    logSecurity(event: string, metadata?: Record<string, any>): void;
+    logAuthEvent(event: string, userId?: string, success?: boolean, metadata?: Record<string, any>): void;
+    logBusinessLogic(operation: string, data: any, context?: string): void;
+    logUserAction(action: string, userId: string, metadata?: Record<string, any>): void;
+    logFeatureUsage(feature: string, userId?: string, metadata?: Record<string, any>): void;
+    logSystemMetrics(): void;
+    getLogs(query: LogQuery): Promise<LogEntry[]>;
+    getLogStats(timeRange: {
+        start: Date;
+        end: Date;
+    }): Promise<any>;
+    cleanupOldLogs(daysToKeep?: number): Promise<number>;
+    private sanitizeHeaders;
+    private isBodyLoggable;
+    private getResponseBody;
+}

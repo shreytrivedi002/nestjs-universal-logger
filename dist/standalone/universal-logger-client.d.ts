@@ -1,0 +1,42 @@
+import { UniversalLoggerFactory } from './universal-logger-factory';
+export declare class UniversalLoggerClient {
+    private readonly factory;
+    private logger;
+    constructor(factory: UniversalLoggerFactory, serviceName?: string, environment?: string, version?: string);
+    log(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    error(message: string, trace?: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    warn(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    debug(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    verbose(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
+    logApiCall(req: any, res: any, duration: number, statusCode: number): Promise<void>;
+    logPerformance(operation: string, duration: number, metadata?: Record<string, any>): Promise<void>;
+    logDatabaseQuery(query: string, duration: number, table?: string, operation?: string): Promise<void>;
+    logExternalCall(url: string, method: string, duration: number, statusCode: number, response?: any): Promise<void>;
+    logSecurity(event: string, metadata?: Record<string, any>): Promise<void>;
+    logAuthEvent(event: string, userId?: string, success?: boolean, metadata?: Record<string, any>): Promise<void>;
+    logBusinessLogic(operation: string, data: any, context?: string): Promise<void>;
+    logUserAction(action: string, userId: string, metadata?: Record<string, any>): Promise<void>;
+    logFeatureUsage(feature: string, userId?: string, metadata?: Record<string, any>): Promise<void>;
+    logSystemMetrics(): Promise<void>;
+    getLogs(query: any): Promise<any[]>;
+    getLogStats(timeRange: {
+        start: Date;
+        end: Date;
+    }): Promise<any>;
+    getErrorTrends(days?: number): Promise<any>;
+    getTopErrors(limit?: number, days?: number): Promise<any>;
+    getPerformanceMetrics(hours?: number): Promise<any>;
+    cleanupOldLogs(daysToKeep?: number): Promise<number>;
+    logUserLogin(userId: string, success: boolean, metadata?: Record<string, any>): Promise<void>;
+    logUserLogout(userId: string, metadata?: Record<string, any>): Promise<void>;
+    logUserRegistration(userId: string, metadata?: Record<string, any>): Promise<void>;
+    logUserProfileUpdate(userId: string, changes: Record<string, any>): Promise<void>;
+    logPayment(userId: string, amount: number, currency: string, metadata?: Record<string, any>): Promise<void>;
+    logErrorWithContext(error: Error, context: string, metadata?: Record<string, any>): Promise<void>;
+    logSlowOperation(operation: string, duration: number, threshold?: number, metadata?: Record<string, any>): Promise<void>;
+    logDatabaseOperation(operation: string, table: string, duration: number, query?: string): Promise<void>;
+    logExternalApiCall(url: string, method: string, duration: number, statusCode: number, response?: any): Promise<void>;
+    logSecurityViolation(event: string, ip?: string, userAgent?: string, metadata?: Record<string, any>): Promise<void>;
+    logBusinessMetric(metric: string, value: number, metadata?: Record<string, any>): Promise<void>;
+    logFeatureAccess(feature: string, userId: string, success: boolean, metadata?: Record<string, any>): Promise<void>;
+}
