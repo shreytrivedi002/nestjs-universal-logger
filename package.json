@@ -1,33 +1,24 @@
 {
   "name": "nestjs-universal-logger-v2",
   "version": "3.5.0",
-  "description": "Universal logging package for NestJS - Automatic system-wide logging with per-service MongoDB collections and TTL-based cleanup",
+  "description": "NestJS logging package with automatic HTTP capture, per-service MongoDB collections, and TTL-based cleanup",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "jest",
-    "publish": "npm publish --access public"
+    "test": "jest"
   },
   "keywords": [
     "nestjs",
     "logging",
-    "universal",
-    "plug-and-play",
     "mongodb",
-    "automatic",
-    "system-wide",
-    "per-service",
-    "collections",
+    "winston",
     "interceptor",
-    "middleware",
-    "monitoring",
-    "analytics",
+    "exception-filter",
+    "per-service",
     "ttl",
-    "cleanup",
-    "retention",
-    "storage-management"
+    "structured-logging"
   ],
   "author": "Your Name",
   "license": "MIT",
@@ -62,10 +53,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/nestjs-universal-logger.git"
+    "url": "git+https://github.com/shreytrivedi002/nestjs-universal-logger.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/nestjs-universal-logger/issues"
+    "url": "https://github.com/shreytrivedi002/nestjs-universal-logger/issues"
   },
-  "homepage": "https://github.com/your-username/nestjs-universal-logger#readme"
+  "homepage": "https://github.com/shreytrivedi002/nestjs-universal-logger#readme"
 }

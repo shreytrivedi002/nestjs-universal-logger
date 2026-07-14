@@ -1,40 +1,44 @@
 # NestJS Universal Logger v2
 
-A plug-and-play universal logging package for NestJS applications that provides automatic system-wide logging with per-service MongoDB collections.
+Plug-and-play logging for NestJS: automatic HTTP request/response capture, exception logging, and manual structured logs stored in **per-service MongoDB collections**, with optional **TTL cleanup**.
 
-## ✨ Features
+> **Scope:** this package is a logger + MongoDB store. It does **not** include a dashboard UI, alert webhooks/email, or CSV/Excel export. Config keys such as `dashboard`, `alerts`, `export`, and `retention` exist on the TypeScript interface for forward compatibility but are **not implemented**.
 
-- **🔧 Plug-and-Play**: Single import, minimal configuration
-- **🌐 System-Wide**: Automatic capture of all API requests, responses, and errors
-- **📊 Per-Service Collections**: Each service gets its own MongoDB collection
-- **🔍 Rich Metadata**: IP, user agent, headers, request body, response data, timing
-- **🛡️ Security Logging**: Authentication events, unauthorized access, security violations
-- **⚡ Performance Monitoring**: Response times, slow requests, database queries
-- **🎯 Categorized Logs**: API, AUTH, SECURITY, BUSINESS, PERFORMANCE categories
-- **🔒 Sensitive Data Protection**: Automatic redaction of sensitive headers and data
-- **📈 Business Metrics**: User actions, feature usage, business events
-- **⏰ Automatic Cleanup**: TTL (Time To Live) configuration for automatic log expiration and storage management
+## Features
 
-## 🚀 Quick Start
+- Plug-and-play NestJS module (`UniversalLoggerStandaloneModule`)
+- Automatic HTTP request / response / error logging via interceptor + exception filter
+- Per-service MongoDB collections (`logs_{serviceName}`)
+- Winston console / optional file transports
+- Manual structured logging (auth, security, business, performance helpers)
+- Query helpers (`getLogs`, `getLogStats`, `getErrorTrends`, etc.)
+- MongoDB TTL indexes for automatic document expiration
+- Sensitive header / body field redaction
 
-### 1. Install the Package
+## Prerequisites
+
+1. A NestJS app with an existing Mongoose connection (`MongooseModule.forRoot(...)`)
+2. Peer deps: `@nestjs/common`, `@nestjs/core`, `@nestjs/mongoose`, `rxjs`
+
+This package registers its own models via `MongooseModule.forFeature`. It does **not** open a MongoDB connection from `config.mongodb.uri` — wire Mongo yourself.
+
+## Install
 
 ```bash
 npm install nestjs-universal-logger-v2
 ```
 
-### 2. Add to Your App Module
+## Quick start
 
 ```typescript
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { UniversalLoggerStandaloneModule } from 'nestjs-universal-logger-v2';
 
 @Module({
   imports: [
-    // ... other imports
+    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/your-db'),
     UniversalLoggerStandaloneModule.forRoot({
-      mongodb: {
-        uri: process.env.MONGO_URI || 'mongodb://localhost:27017/your-db',
-      },
       logging: {
         level: 'info',
         serviceName: 'your-service-name',
@@ -53,15 +57,9 @@ import { UniversalLoggerStandaloneModule } from 'nestjs-universal-logger-v2';
         slowRequestThreshold: 1000,
         sensitiveHeaders: ['authorization', 'cookie', 'x-api-key'],
       },
-      performance: {
-        enabled: true,
-      },
-      security: {
-        enabled: true,
-      },
-      business: {
-        enabled: true,
-      },
+      performance: { enabled: true },
+      security: { enabled: true },
+      business: { enabled: true },
       ttl: {
         enabled: true,
         expireAfterSeconds: 2592000, // 30 days
@@ -73,127 +71,114 @@ import { UniversalLoggerStandaloneModule } from 'nestjs-universal-logger-v2';
 export class AppModule {}
 ```
 
-### 3. That's It! 🎉
+After `forRoot`, the module registers:
 
-The logger will automatically:
-- ✅ Capture all HTTP requests and responses
-- ✅ Log authentication events
-- ✅ Track performance metrics
-- ✅ Monitor security events
-- ✅ Store everything in MongoDB collections
+- `APP_INTERCEPTOR` → `UniversalLoggerInterceptor` (HTTP request/response)
+- `APP_FILTER` → `UniversalLoggerExceptionFilter` (uncaught exceptions)
 
-## 📋 Configuration Options
+`UniversalLoggerGuard` is available but **not** registered automatically — use it yourself if needed.
 
-### MongoDB Configuration
-```typescript
-mongodb: {
-  uri: string; // MongoDB connection string
-}
-```
+## What is automatic vs manual
 
-### Logging Configuration
+| Capability | Automatic? | How |
+|------------|------------|-----|
+| HTTP request / response logging | Yes | Interceptor |
+| Uncaught exception logging | Yes | Exception filter |
+| Auth / login / logout events | No | Call `UniversalLoggerClient` helpers |
+| Security violations | No | Call helpers (or use the optional guard) |
+| Business / payment / feature usage | No | Call helpers |
+| DB / external call timing | No | Call helpers |
+| TTL cleanup | Yes (when configured) | MongoDB TTL index on insert |
+| Manual bulk cleanup | Optional | `cleanupOldLogs(days)` |
+
+## Configuration
+
+### Logging
+
 ```typescript
 logging: {
-  level: 'info' | 'error' | 'warn' | 'debug' | 'verbose';
-  serviceName: string; // Used for collection naming
-  environment: string; // dev, staging, production
-  version: string; // Your app version
-  enableConsole: boolean; // Console logging
-  enableFile: boolean; // File logging
+  level?: 'error' | 'warn' | 'info' | 'debug' | 'verbose';
+  serviceName?: string;   // used for collection naming
+  environment?: string;
+  version?: string;
+  enableConsole?: boolean;
+  enableFile?: boolean;
+  logDirectory?: string;
+  maxFileSize?: number;
+  maxFiles?: number;
 }
 ```
 
-### API Logging Configuration
+### API logging
+
 ```typescript
 api: {
-  enabled: boolean; // Enable API request/response logging
-  logHeaders: boolean; // Log request headers
-  logBody: boolean; // Log request body
-  logQuery: boolean; // Log query parameters
-  logResponses: boolean; // Log response data
-  maxBodySize: number; // Max body size to log (bytes)
-  slowRequestThreshold: number; // Slow request threshold (ms)
-  sensitiveHeaders: string[]; // Headers to redact
+  enabled?: boolean;
+  logHeaders?: boolean;
+  logBody?: boolean;
+  logQuery?: boolean;
+  logResponses?: boolean;
+  maxBodySize?: number;
+  slowRequestThreshold?: number;
+  sensitiveHeaders?: string[];
+  excludePaths?: string[];
+  includePaths?: string[];
 }
 ```
 
-### Performance Configuration
+### Feature toggles
+
 ```typescript
-performance: {
-  enabled: boolean; // Enable performance monitoring
-}
+performance?: { enabled?: boolean; /* … */ };
+security?: { enabled?: boolean; /* … */ };
+business?: { enabled?: boolean; /* … */ };
 ```
 
-### Security Configuration
-```typescript
-security: {
-  enabled: boolean; // Enable security event logging
-}
-```
+These gates apply to the corresponding **manual** helper methods (and related logging). They do not enable a dashboard or alerts.
 
-### Business Configuration
-```typescript
-business: {
-  enabled: boolean; // Enable business event logging
-}
-```
+### TTL
 
-### TTL (Time To Live) Configuration
 ```typescript
 ttl: {
-  enabled: boolean; // Enable automatic document expiration
-  expireAfterSeconds: number; // Time in seconds after which documents will be automatically deleted
-  indexField: 'timestamp' | 'created_at' | 'updated_at'; // Field to use for TTL index (defaults to 'timestamp')
+  enabled: boolean;
+  expireAfterSeconds: number;
+  indexField?: 'timestamp' | 'created_at' | 'updated_at'; // default: timestamp
 }
 ```
 
-#### TTL Configuration Examples:
+Examples:
+
 ```typescript
-// Delete logs after 30 days (2,592,000 seconds)
-ttl: {
-  enabled: true,
-  expireAfterSeconds: 2592000,
-  indexField: 'timestamp'
-}
+// 30 days
+ttl: { enabled: true, expireAfterSeconds: 2592000, indexField: 'timestamp' }
 
-// Delete logs after 7 days (604,800 seconds)
-ttl: {
-  enabled: true,
-  expireAfterSeconds: 604800,
-  indexField: 'created_at'
-}
+// 7 days
+ttl: { enabled: true, expireAfterSeconds: 604800, indexField: 'created_at' }
 ```
 
-#### TTL Best Practices:
-- **Development**: Use shorter TTL periods (1-7 days) to save storage
-- **Production**: Consider compliance requirements (30-90 days typical)
-- **High-volume services**: Use shorter retention to manage storage costs
-- **Critical systems**: Longer retention for audit trails and debugging
-- **Index field**: Use 'timestamp' for log creation time, 'created_at' for document creation time
+### Not implemented (config stubs only)
 
-## 📊 Log Categories
+These appear on `UniversalLoggerConfig` but have **no runtime behavior**:
 
-The logger automatically categorizes logs into:
+- `dashboard` — no UI, routes, or auth
+- `alerts` — no webhooks or email
+- `export` — no CSV/Excel export
+- `retention` — prefer `ttl` (or `cleanupOldLogs`) instead
+- `mongodb` — connection is managed by your app’s `MongooseModule.forRoot`
 
-- **API_REQUEST**: Incoming HTTP requests
-- **API_RESPONSE**: HTTP responses with timing
-- **AUTH**: Authentication events (success/failure)
-- **AUTH_ERROR**: Authentication failures
-- **SECURITY**: Security violations and unauthorized access
-- **EXCEPTION_FILTER**: All application errors
-- **EXTERNAL_SERVICE_ERROR**: External API call errors
-- **PERFORMANCE**: Slow requests and performance metrics
-- **BUSINESS**: Custom business events
+## MongoDB collections
 
-## 🔍 MongoDB Collections
+Collection name:
 
-Each service gets its own collection named: `logs_{serviceName}_{environment}`
+```text
+logs_{sanitizedServiceName}
+```
 
-Example: `logs_admin-panel_uat`
+Example: `serviceName: 'admin-panel'` → `logs_admin_panel`
 
-## 📝 Manual Logging (Optional)
+Environment is stored on each document; it is **not** part of the collection name.
 
-You can also use the logger manually in your services:
+## Manual logging
 
 ```typescript
 import { UniversalLoggerClient } from 'nestjs-universal-logger-v2';
@@ -203,109 +188,75 @@ export class YourService {
   constructor(private readonly logger: UniversalLoggerClient) {}
 
   async someMethod() {
-    // Basic logging
     await this.logger.log('User action performed', 'USER_ACTION');
-    await this.logger.error('Something went wrong', 'Error stack trace', 'ERROR_CONTEXT');
+    await this.logger.error('Something went wrong', 'Error stack', 'ERROR_CONTEXT');
 
-    // Business logging
     await this.logger.logUserAction('profile_updated', 'user123', { changes: ['name', 'email'] });
     await this.logger.logPayment('user123', 99.99, 'USD', { paymentMethod: 'card' });
-
-    // Performance logging
     await this.logger.logSlowOperation('database_query', 1500, 1000);
-
-    // Security logging
     await this.logger.logSecurityViolation('suspicious_activity', '192.168.1.1');
   }
 }
 ```
 
-## 🛠️ Advanced Usage
+### Useful client methods
 
-### Service-Specific Configuration
+- Core: `log`, `error`, `warn`, `debug`, `verbose`
+- Auth: `logAuthEvent`, `logUserLogin`, `logUserLogout`
+- Security: `logSecurity`, `logSecurityViolation`
+- Business: `logUserAction`, `logFeatureUsage`, `logPayment`, `logBusinessMetric`
+- Performance: `logPerformance`, `logSlowOperation`, `logDatabaseQuery`, `logExternalCall`
+- Query: `getLogs`, `getLogStats`, `getErrorTrends`, `getTopErrors`, `getPerformanceMetrics`
+- Cleanup: `cleanupOldLogs`
+
+See [README-STANDALONE.md](./README-STANDALONE.md) for a fuller API-oriented overview.
+
+## Advanced setup
+
+### Per-service registration
 
 ```typescript
 UniversalLoggerStandaloneModule.forService('payment-service', {
-  // ... configuration
-})
+  logging: { serviceName: 'payment-service', /* … */ },
+  // …
+});
 ```
 
-### Async Configuration
+### Async configuration
 
 ```typescript
 UniversalLoggerStandaloneModule.forRootAsync({
   useFactory: (configService: ConfigService) => ({
-    mongodb: {
-      uri: configService.get('MONGO_URI'),
-    },
     logging: {
       serviceName: configService.get('SERVICE_NAME'),
       environment: configService.get('NODE_ENV'),
+      level: configService.get('LOG_LEVEL') || 'info',
+    },
+    ttl: {
+      enabled: true,
+      expireAfterSeconds: 2592000,
     },
   }),
   inject: [ConfigService],
-})
+});
 ```
 
-## 📈 What Gets Logged Automatically
+## Public exports
 
-### API Requests
-- ✅ HTTP method and URL
-- ✅ Request headers (with sensitive data redacted)
-- ✅ Request body (configurable size limit)
-- ✅ Query parameters
-- ✅ IP address and user agent
-- ✅ Request timestamp
+Primary entry (`nestjs-universal-logger-v2`):
 
-### API Responses
-- ✅ Response status code
-- ✅ Response headers
-- ✅ Response body (configurable)
-- ✅ Response time
-- ✅ Request ID for correlation
+- `UniversalLoggerStandaloneModule`
+- `UniversalLoggerClient`
+- `UniversalLoggerFactory`
+- `UniversalLoggerStandalone`
+- `UniversalLoggerInterceptor`
+- `UniversalLoggerExceptionFilter`
+- `UniversalLoggerGuard`
+- Types: `UniversalLoggerConfig`, `LogEntry`, `LogQuery`, schema helpers
 
-### Authentication Events
-- ✅ Login attempts (success/failure)
-- ✅ Token validation
-- ✅ Authorization checks
-- ✅ User ID and session info
+A legacy `UniversalLoggerModule` / middleware path exists in the source tree for compatibility work but is **not** exported from the package entrypoint. Prefer the standalone module above.
 
-### Security Events
-- ✅ Unauthorized access attempts
-- ✅ Suspicious activities
-- ✅ Security violations
-- ✅ IP blacklisting events
-
-### Performance Metrics
-- ✅ Response times
-- ✅ Slow request detection
-- ✅ Database query timing
-- ✅ External API call timing
-
-### Error Handling
-- ✅ All application exceptions
-- ✅ Stack traces
-- ✅ Error context
-- ✅ Error categorization
-
-## 🔧 Environment Variables
-
-```bash
-# MongoDB
-MONGO_URI=mongodb://localhost:27017/your-db
-
-# Service Configuration
-SERVICE_NAME=your-service-name
-NODE_ENV=development
-APP_VERSION=1.0.0
-
-# Logging
-LOG_LEVEL=info
-ENABLE_CONSOLE_LOGGING=true
-ENABLE_FILE_LOGGING=false
-```
-
-## 📊 Example Log Output
+## Example log document
 
 ```json
 {
@@ -314,8 +265,7 @@ ENABLE_FILE_LOGGING=false
   "service": "admin-panel",
   "environment": "uat",
   "version": "1.0.0",
-  "category": "API_REQUEST",
-  "context": "API_REQUEST",
+  "context": "API",
   "message": "API Request Started: GET /admin/auditLog/list",
   "metadata": {
     "method": "GET",
@@ -323,41 +273,11 @@ ENABLE_FILE_LOGGING=false
     "ip": "::1",
     "userAgent": "Mozilla/5.0...",
     "headers": { "authorization": "[REDACTED]" },
-    "body": { "email": "user@example.com" },
     "requestId": "req_1754139207993_d28emip7h"
   }
 }
 ```
 
-## 🚀 Production Ready
+## License
 
-- ✅ **High Performance**: Minimal overhead, async logging
-- ✅ **Scalable**: Per-service collections, efficient indexing
-- ✅ **Secure**: Sensitive data redaction, secure storage
-- ✅ **Reliable**: Error handling, fallback mechanisms
-- ✅ **Observable**: Rich metadata, correlation IDs
-- ✅ **Storage Management**: TTL-based automatic cleanup, configurable retention periods
-- ✅ **Cost Effective**: Automatic log expiration prevents unlimited storage growth
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
-## 🆘 Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the example configurations
-
----
-
-**Made with ❤️ for the NestJS community**
+MIT — see [LICENSE](./LICENSE).

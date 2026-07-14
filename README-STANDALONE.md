@@ -1,363 +1,149 @@
-# NestJS Universal Logger v2 - Standalone Package
+# NestJS Universal Logger v2 — Standalone API
 
-A plug-and-play universal logging package for NestJS applications that provides automatic system-wide logging with per-service MongoDB collections.
+This document covers the **standalone** API that the package actually exports and recommends.
 
-## ✨ Features
+For install, module setup, TTL, and scope limits (no dashboard / alerts / export), see the main [README.md](./README.md).
 
-- **🔧 Plug-and-Play**: Single import, minimal configuration
-- **🌐 System-Wide**: Automatic capture of all API requests, responses, and errors
-- **📊 Per-Service Collections**: Each service gets its own MongoDB collection
-- **🔍 Rich Metadata**: IP, user agent, headers, request body, response data, timing
-- **🛡️ Security Logging**: Authentication events, unauthorized access, security violations
-- **⚡ Performance Monitoring**: Response times, slow requests, database queries
-- **🎯 Categorized Logs**: API, AUTH, SECURITY, BUSINESS, PERFORMANCE categories
-- **🔒 Sensitive Data Protection**: Automatic redaction of sensitive headers and data
-- **📈 Business Metrics**: User actions, feature usage, business events
-- **⏰ Automatic Cleanup**: TTL (Time To Live) configuration for automatic log expiration and storage management
-
-## 🚀 Quick Start
-
-### 1. Install the Package
-
-```bash
-npm install nestjs-universal-logger-v2
-```
-
-### 2. Add to Your App Module
+## Recommended module
 
 ```typescript
 import { UniversalLoggerStandaloneModule } from 'nestjs-universal-logger-v2';
 
-@Module({
-  imports: [
-    // ... other imports
-    UniversalLoggerStandaloneModule.forRoot({
-      mongodb: {
-        uri: process.env.MONGO_URI || 'mongodb://localhost:27017/your-db',
-      },
-      logging: {
-        level: 'info',
-        serviceName: 'your-service-name',
-        environment: process.env.NODE_ENV || 'development',
-        version: '1.0.0',
-        enableConsole: true,
-        enableFile: false,
-      },
-      api: {
-        enabled: true,
-        logHeaders: true,
-        logBody: true,
-        logQuery: true,
-        logResponses: true,
-        maxBodySize: 1024,
-        slowRequestThreshold: 1000,
-        sensitiveHeaders: ['authorization', 'cookie', 'x-api-key'],
-      },
-      performance: {
-        enabled: true,
-      },
-      security: {
-        enabled: true,
-      },
-      business: {
-        enabled: true,
-      },
-      ttl: {
-        enabled: true,
-        expireAfterSeconds: 2592000, // 30 days
-        indexField: 'timestamp',
-      },
-    }),
-  ],
-})
-export class AppModule {}
+UniversalLoggerStandaloneModule.forRoot({ /* config */ });
+// or
+UniversalLoggerStandaloneModule.forRootAsync({ useFactory, inject });
+// or
+UniversalLoggerStandaloneModule.forService('payment-service', { /* config */ });
 ```
 
-### 3. That's It! 🎉
+On `forRoot` / `forService`, Nest registers:
 
-The logger will automatically:
-- ✅ Capture all HTTP requests and responses
-- ✅ Log authentication events
-- ✅ Track performance metrics
-- ✅ Monitor security events
-- ✅ Store everything in MongoDB collections
+| Provider | Role |
+|----------|------|
+| `UniversalLoggerClient` | Inject this for application/manual logging |
+| `UniversalLoggerFactory` | Creates per-service loggers |
+| `UniversalLoggerInterceptor` | Bound as `APP_INTERCEPTOR` |
+| `UniversalLoggerExceptionFilter` | Bound as `APP_FILTER` |
 
-## 📋 Configuration Options
+`UniversalLoggerGuard` is exported but **not** auto-registered.
 
-### MongoDB Configuration
-```typescript
-mongodb: {
-  uri: string; // MongoDB connection string
-}
-```
-
-### Logging Configuration
-```typescript
-logging: {
-  level: 'info' | 'error' | 'warn' | 'debug' | 'verbose';
-  serviceName: string; // Used for collection naming
-  environment: string; // dev, staging, production
-  version: string; // Your app version
-  enableConsole: boolean; // Console logging
-  enableFile: boolean; // File logging
-}
-```
-
-### API Logging Configuration
-```typescript
-api: {
-  enabled: boolean; // Enable API request/response logging
-  logHeaders: boolean; // Log request headers
-  logBody: boolean; // Log request body
-  logQuery: boolean; // Log query parameters
-  logResponses: boolean; // Log response data
-  maxBodySize: number; // Max body size to log (bytes)
-  slowRequestThreshold: number; // Slow request threshold (ms)
-  sensitiveHeaders: string[]; // Headers to redact
-}
-```
-
-### Performance Configuration
-```typescript
-performance: {
-  enabled: boolean; // Enable performance monitoring
-}
-```
-
-### Security Configuration
-```typescript
-security: {
-  enabled: boolean; // Enable security event logging
-}
-```
-
-### Business Configuration
-```typescript
-business: {
-  enabled: boolean; // Enable business event logging
-}
-```
-
-### TTL (Time To Live) Configuration
-```typescript
-ttl: {
-  enabled: boolean; // Enable automatic document expiration
-  expireAfterSeconds: number; // Time in seconds after which documents will be automatically deleted
-  indexField: 'timestamp' | 'created_at' | 'updated_at'; // Field to use for TTL index (defaults to 'timestamp')
-}
-```
-
-#### TTL Configuration Examples:
-```typescript
-// Delete logs after 30 days (2,592,000 seconds)
-ttl: {
-  enabled: true,
-  expireAfterSeconds: 2592000,
-  indexField: 'timestamp'
-}
-
-// Delete logs after 7 days (604,800 seconds)
-ttl: {
-  enabled: true,
-  expireAfterSeconds: 604800,
-  indexField: 'created_at'
-}
-```
-
-#### TTL Best Practices:
-- **Development**: Use shorter TTL periods (1-7 days) to save storage
-- **Production**: Consider compliance requirements (30-90 days typical)
-- **High-volume services**: Use shorter retention to manage storage costs
-- **Critical systems**: Longer retention for audit trails and debugging
-- **Index field**: Use 'timestamp' for log creation time, 'created_at' for document creation time
-
-## 📊 Log Categories
-
-The logger automatically categorizes logs into:
-
-- **API_REQUEST**: Incoming HTTP requests
-- **API_RESPONSE**: HTTP responses with timing
-- **AUTH**: Authentication events (success/failure)
-- **AUTH_ERROR**: Authentication failures
-- **SECURITY**: Security violations and unauthorized access
-- **EXCEPTION_FILTER**: All application errors
-- **EXTERNAL_SERVICE_ERROR**: External API call errors
-- **PERFORMANCE**: Slow requests and performance metrics
-- **BUSINESS**: Custom business events
-
-## 🔍 MongoDB Collections
-
-Each service gets its own collection named: `logs_{serviceName}_{environment}`
-
-Example: `logs_admin-panel_uat`
-
-## 📝 Manual Logging (Optional)
-
-You can also use the logger manually in your services:
+## Injecting the client
 
 ```typescript
+import { Injectable } from '@nestjs/common';
 import { UniversalLoggerClient } from 'nestjs-universal-logger-v2';
 
 @Injectable()
-export class YourService {
+export class OrdersService {
   constructor(private readonly logger: UniversalLoggerClient) {}
 
-  async someMethod() {
-    // Basic logging
-    await this.logger.log('User action performed', 'USER_ACTION');
-    await this.logger.error('Something went wrong', 'Error stack trace', 'ERROR_CONTEXT');
-
-    // Business logging
-    await this.logger.logUserAction('profile_updated', 'user123', { changes: ['name', 'email'] });
-    await this.logger.logPayment('user123', 99.99, 'USD', { paymentMethod: 'card' });
-
-    // Performance logging
-    await this.logger.logSlowOperation('database_query', 1500, 1000);
-
-    // Security logging
-    await this.logger.logSecurityViolation('suspicious_activity', '192.168.1.1');
+  async placeOrder(userId: string, amount: number) {
+    await this.logger.logUserAction('order_started', userId, { amount });
+    try {
+      // …
+      await this.logger.logPayment(userId, amount, 'USD');
+    } catch (error) {
+      await this.logger.logErrorWithContext(error as Error, 'OrdersService.placeOrder', {
+        userId,
+        amount,
+      });
+      throw error;
+    }
   }
 }
 ```
 
-## 🛠️ Advanced Usage
+## Client / standalone methods
 
-### Service-Specific Configuration
+All methods below are available on `UniversalLoggerClient` (and the underlying `UniversalLoggerStandalone`).
 
-```typescript
-UniversalLoggerStandaloneModule.forService('payment-service', {
-  // ... configuration
-})
+### Core
+
+| Method | Description |
+|--------|-------------|
+| `log(message, context?, metadata?)` | Info-level log |
+| `error(message, trace?, context?, metadata?)` | Error log |
+| `warn(message, context?, metadata?)` | Warning |
+| `debug(message, context?, metadata?)` | Debug |
+| `verbose(message, context?, metadata?)` | Verbose |
+
+### HTTP / API (usually automatic via interceptor)
+
+| Method | Description |
+|--------|-------------|
+| `logApiCall(req, res, duration, statusCode)` | Structured API call entry |
+
+### Auth & security (manual unless you add the guard)
+
+| Method | Description |
+|--------|-------------|
+| `logAuthEvent(event, userId?, success?, metadata?)` | Auth success/failure |
+| `logUserLogin(userId, success, metadata?)` | Login helper |
+| `logUserLogout(userId, metadata?)` | Logout helper |
+| `logSecurity(event, metadata?)` | Security event |
+| `logSecurityViolation(event, ip?, userAgent?, metadata?)` | Violation helper |
+
+### Business
+
+| Method | Description |
+|--------|-------------|
+| `logBusinessLogic(operation, data, context?)` | Generic business event |
+| `logUserAction(action, userId, metadata?)` | User action |
+| `logFeatureUsage(feature, userId?, metadata?)` | Feature usage |
+| `logUserRegistration(userId, metadata?)` | Registration helper |
+| `logUserProfileUpdate(userId, changes)` | Profile update helper |
+| `logPayment(userId, amount, currency, metadata?)` | Payment helper |
+| `logBusinessMetric(metric, value, metadata?)` | Numeric metric |
+| `logFeatureAccess(feature, userId, success, metadata?)` | Feature access |
+
+### Performance
+
+| Method | Description |
+|--------|-------------|
+| `logPerformance(operation, duration, metadata?)` | Timed operation |
+| `logSlowOperation(operation, duration, threshold?, metadata?)` | Slow op helper |
+| `logDatabaseQuery(query, duration, table?, operation?)` | DB timing |
+| `logDatabaseOperation(operation, table, duration, query?)` | DB helper |
+| `logExternalCall(url, method, duration, statusCode, response?)` | External HTTP |
+| `logExternalApiCall(...)` | Alias-style helper |
+| `logSystemMetrics()` | Process memory / CPU snapshot |
+
+### Query & cleanup
+
+| Method | Description |
+|--------|-------------|
+| `getLogs(query)` | Find logs (`LogQuery`) |
+| `getLogStats(timeRange)` | Aggregated counts / durations |
+| `getErrorTrends(days?)` | Error trend helper |
+| `getTopErrors(limit?, days?)` | Top errors |
+| `getPerformanceMetrics(hours?)` | Performance aggregates |
+| `cleanupOldLogs(daysToKeep?)` | Manual delete older than N days |
+
+## Automatic HTTP behavior
+
+`UniversalLoggerInterceptor`:
+
+- Assigns / propagates `x-request-id`
+- Logs request start (method, URL, IP, UA, sanitized headers/query/body)
+- Logs success or error completion with duration and status
+- Categorizes paths heuristically (`AUTH`, `PAYMENT`, `ADMIN`, `HEALTH`, etc.)
+
+`UniversalLoggerExceptionFilter`:
+
+- Logs uncaught exceptions with stack / context
+
+Auth, business, and many security events are **not** inferred automatically — call the client.
+
+## Collections
+
+```text
+logs_{sanitizedServiceName}
 ```
 
-### Async Configuration
+`environment` is a document field, not part of the collection name.
 
-```typescript
-UniversalLoggerStandaloneModule.forRootAsync({
-  useFactory: (configService: ConfigService) => ({
-    mongodb: {
-      uri: configService.get('MONGO_URI'),
-    },
-    logging: {
-      serviceName: configService.get('SERVICE_NAME'),
-      environment: configService.get('NODE_ENV'),
-    },
-  }),
-  inject: [ConfigService],
-})
-```
+## Scope reminder
 
-## 📈 What Gets Logged Automatically
+Implemented: Nest logging module, Mongo persistence, TTL, interceptor/filter, manual helpers, query helpers.
 
-### API Requests
-- ✅ HTTP method and URL
-- ✅ Request headers (with sensitive data redacted)
-- ✅ Request body (configurable size limit)
-- ✅ Query parameters
-- ✅ IP address and user agent
-- ✅ Request timestamp
-
-### API Responses
-- ✅ Response status code
-- ✅ Response headers
-- ✅ Response body (configurable)
-- ✅ Response time
-- ✅ Request ID for correlation
-
-### Authentication Events
-- ✅ Login attempts (success/failure)
-- ✅ Token validation
-- ✅ Authorization checks
-- ✅ User ID and session info
-
-### Security Events
-- ✅ Unauthorized access attempts
-- ✅ Suspicious activities
-- ✅ Security violations
-- ✅ IP blacklisting events
-
-### Performance Metrics
-- ✅ Response times
-- ✅ Slow request detection
-- ✅ Database query timing
-- ✅ External API call timing
-
-### Error Handling
-- ✅ All application exceptions
-- ✅ Stack traces
-- ✅ Error context
-- ✅ Error categorization
-
-## 🔧 Environment Variables
-
-```bash
-# MongoDB
-MONGO_URI=mongodb://localhost:27017/your-db
-
-# Service Configuration
-SERVICE_NAME=your-service-name
-NODE_ENV=development
-APP_VERSION=1.0.0
-
-# Logging
-LOG_LEVEL=info
-ENABLE_CONSOLE_LOGGING=true
-ENABLE_FILE_LOGGING=false
-```
-
-## 📊 Example Log Output
-
-```json
-{
-  "timestamp": "2025-08-02T12:53:27.993Z",
-  "level": "info",
-  "service": "admin-panel",
-  "environment": "uat",
-  "version": "1.0.0",
-  "category": "API_REQUEST",
-  "context": "API_REQUEST",
-  "message": "API Request Started: GET /admin/auditLog/list",
-  "metadata": {
-    "method": "GET",
-    "url": "/admin/auditLog/list",
-    "ip": "::1",
-    "userAgent": "Mozilla/5.0...",
-    "headers": { "authorization": "[REDACTED]" },
-    "body": { "email": "user@example.com" },
-    "requestId": "req_1754139207993_d28emip7h"
-  }
-}
-```
-
-## 🚀 Production Ready
-
-- ✅ **High Performance**: Minimal overhead, async logging
-- ✅ **Scalable**: Per-service collections, efficient indexing
-- ✅ **Secure**: Sensitive data redaction, secure storage
-- ✅ **Reliable**: Error handling, fallback mechanisms
-- ✅ **Observable**: Rich metadata, correlation IDs
-- ✅ **Storage Management**: TTL-based automatic cleanup, configurable retention periods
-- ✅ **Cost Effective**: Automatic log expiration prevents unlimited storage growth
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
-## 🆘 Support
-
-For issues and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the example configurations
-
----
-
-**Made with ❤️ for the NestJS community**
+**Not** implemented: dashboard UI, alerts, email/webhooks, CSV/Excel export, archive-based retention. Prefer `ttl` and/or `cleanupOldLogs` for storage management.
