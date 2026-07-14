@@ -1,6 +1,6 @@
 {
   "name": "nestjs-universal-logger-v2",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "description": "NestJS logging package with automatic HTTP capture, per-service MongoDB collections, and TTL-based cleanup",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
