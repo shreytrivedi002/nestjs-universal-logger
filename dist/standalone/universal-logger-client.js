@@ -17,6 +17,7 @@ let UniversalLoggerClient = class UniversalLoggerClient {
         this.factory = factory;
         this.logger = this.factory.createLogger(serviceName, environment, version);
     }
+    // Core logging methods
     async log(message, context, metadata) {
         await this.logger.log(message, context, metadata);
     }
@@ -32,9 +33,11 @@ let UniversalLoggerClient = class UniversalLoggerClient {
     async verbose(message, context, metadata) {
         await this.logger.verbose(message, context, metadata);
     }
+    // API Call Logging
     async logApiCall(req, res, duration, statusCode) {
         await this.logger.logApiCall(req, res, duration, statusCode);
     }
+    // Performance Logging
     async logPerformance(operation, duration, metadata) {
         await this.logger.logPerformance(operation, duration, metadata);
     }
@@ -44,12 +47,14 @@ let UniversalLoggerClient = class UniversalLoggerClient {
     async logExternalCall(url, method, duration, statusCode, response) {
         await this.logger.logExternalCall(url, method, duration, statusCode, response);
     }
+    // Security Logging
     async logSecurity(event, metadata) {
         await this.logger.logSecurity(event, metadata);
     }
     async logAuthEvent(event, userId, success = true, metadata) {
         await this.logger.logAuthEvent(event, userId, success, metadata);
     }
+    // Business Logic Logging
     async logBusinessLogic(operation, data, context) {
         await this.logger.logBusinessLogic(operation, data, context);
     }
@@ -59,9 +64,11 @@ let UniversalLoggerClient = class UniversalLoggerClient {
     async logFeatureUsage(feature, userId, metadata) {
         await this.logger.logFeatureUsage(feature, userId, metadata);
     }
+    // System Metrics Logging
     async logSystemMetrics() {
         await this.logger.logSystemMetrics();
     }
+    // Query methods
     async getLogs(query) {
         return this.logger.getLogs(query);
     }
@@ -80,6 +87,7 @@ let UniversalLoggerClient = class UniversalLoggerClient {
     async cleanupOldLogs(daysToKeep = 30) {
         return this.logger.cleanupOldLogs(daysToKeep);
     }
+    // Convenience methods for common logging patterns
     async logUserLogin(userId, success, metadata) {
         await this.logAuthEvent('login', userId, success, metadata);
     }

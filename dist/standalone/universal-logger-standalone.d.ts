@@ -1,5 +1,27 @@
 import { Model } from 'mongoose';
 import { LogEntry, LogQuery, UniversalLoggerConfig } from '../interfaces/config.interface';
+/**
+ * UniversalLoggerStandalone - Main logging service for NestJS applications
+ *
+ * Provides comprehensive logging capabilities including:
+ * - Automatic API request/response logging
+ * - Security event tracking
+ * - Performance monitoring
+ * - Business metrics logging
+ * - TTL-based automatic cleanup
+ * - MongoDB storage with per-service collections
+ *
+ * @example
+ * ```typescript
+ * // Basic usage in a service
+ * constructor(private readonly logger: UniversalLoggerStandalone) {}
+ *
+ * async someMethod() {
+ *   await this.logger.log('Operation completed', 'BUSINESS');
+ *   await this.logger.logUserAction('profile_updated', 'user123');
+ * }
+ * ```
+ */
 export declare class UniversalLoggerStandalone {
     private readonly winstonLogger;
     private readonly config;
@@ -7,6 +29,15 @@ export declare class UniversalLoggerStandalone {
     private readonly environment;
     private readonly version;
     private readonly logModel;
+    /**
+     * Initialize the Universal Logger with configuration and dependencies
+     *
+     * @param logModel - Mongoose model for log entries
+     * @param config - Universal logger configuration including TTL settings
+     * @param serviceName - Optional service name override
+     * @param environment - Optional environment override
+     * @param version - Optional version override
+     */
     constructor(logModel: Model<LogEntry>, config: UniversalLoggerConfig, serviceName?: string, environment?: string, version?: string);
     private createTransports;
     log(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;

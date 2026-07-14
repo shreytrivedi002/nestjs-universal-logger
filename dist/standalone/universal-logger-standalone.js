@@ -14,7 +14,38 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("mongoose");
 const winston_1 = require("winston");
 const uuid_1 = require("uuid");
+/**
+ * UniversalLoggerStandalone - Main logging service for NestJS applications
+ *
+ * Provides comprehensive logging capabilities including:
+ * - Automatic API request/response logging
+ * - Security event tracking
+ * - Performance monitoring
+ * - Business metrics logging
+ * - TTL-based automatic cleanup
+ * - MongoDB storage with per-service collections
+ *
+ * @example
+ * ```typescript
+ * // Basic usage in a service
+ * constructor(private readonly logger: UniversalLoggerStandalone) {}
+ *
+ * async someMethod() {
+ *   await this.logger.log('Operation completed', 'BUSINESS');
+ *   await this.logger.logUserAction('profile_updated', 'user123');
+ * }
+ * ```
+ */
 let UniversalLoggerStandalone = class UniversalLoggerStandalone {
+    /**
+     * Initialize the Universal Logger with configuration and dependencies
+     *
+     * @param logModel - Mongoose model for log entries
+     * @param config - Universal logger configuration including TTL settings
+     * @param serviceName - Optional service name override
+     * @param environment - Optional environment override
+     * @param version - Optional version override
+     */
     constructor(logModel, config, serviceName, environment, version) {
         this.logModel = logModel;
         this.config = config;
@@ -54,6 +85,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
         }
         return transportArray;
     }
+    // Core logging methods
     async log(message, context, metadata) {
         this.winstonLogger.info(message, { context, ...metadata });
         await this.createLogEntry('info', message, metadata, context);
@@ -74,6 +106,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
         this.winstonLogger.verbose(message, { context, ...metadata });
         await this.createLogEntry('verbose', message, metadata, context);
     }
+    // API Call Logging
     async logApiCall(req, res, duration, statusCode) {
         if (!this.config.api?.enabled)
             return;
@@ -116,6 +149,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
             });
         }
     }
+    // Performance Logging
     async logPerformance(operation, duration, metadata) {
         if (!this.config.performance?.enabled)
             return;
@@ -174,6 +208,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
             performance: performanceData
         });
     }
+    // Security Logging
     async logSecurity(event, metadata) {
         if (!this.config.security?.enabled)
             return;
@@ -203,6 +238,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
             });
         }
     }
+    // Business Logic Logging
     async logBusinessLogic(operation, data, context) {
         if (!this.config.business?.enabled)
             return;
@@ -230,6 +266,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
             ...metadata
         });
     }
+    // System Metrics Logging
     async logSystemMetrics() {
         if (!this.config.performance?.enabled)
             return;
@@ -251,6 +288,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
             performance: performanceData
         });
     }
+    // Query methods
     async getLogs(query) {
         const filter = {};
         if (query.service)
@@ -398,6 +436,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
         });
         return result.deletedCount || 0;
     }
+    // Helper methods
     async createLogEntry(level, message, metadata, context) {
         const logEntry = {
             id: (0, uuid_1.v4)(),
@@ -445,6 +484,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
         return bodyStr.length <= maxSize;
     }
     getResponseBody(res) {
+        // This is a simplified version - in practice you'd need to capture the response body
         return undefined;
     }
 };

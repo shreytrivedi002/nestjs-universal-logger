@@ -54,6 +54,7 @@ let UniversalLoggerStandaloneModule = UniversalLoggerStandaloneModule_1 = class 
                 },
                 universal_logger_interceptor_1.UniversalLoggerInterceptor,
                 universal_logger_exception_filter_1.UniversalLoggerExceptionFilter,
+                // UniversalLoggerGuard, // Removed automatic guard registration
                 {
                     provide: core_1.APP_INTERCEPTOR,
                     useClass: universal_logger_interceptor_1.UniversalLoggerInterceptor
@@ -62,12 +63,14 @@ let UniversalLoggerStandaloneModule = UniversalLoggerStandaloneModule_1 = class 
                     provide: core_1.APP_FILTER,
                     useClass: universal_logger_exception_filter_1.UniversalLoggerExceptionFilter
                 }
+                // Removed automatic guard registration - use manually if needed
             ],
             exports: [
                 universal_logger_factory_1.UniversalLoggerFactory,
                 universal_logger_client_1.UniversalLoggerClient,
                 universal_logger_interceptor_1.UniversalLoggerInterceptor,
                 universal_logger_exception_filter_1.UniversalLoggerExceptionFilter
+                // UniversalLoggerGuard // Removed from exports
             ]
         };
     }
@@ -75,6 +78,8 @@ let UniversalLoggerStandaloneModule = UniversalLoggerStandaloneModule_1 = class 
         const serviceName = 'default-service';
         const collectionName = (0, log_entry_schema_1.getLogCollectionName)(serviceName);
         const modelName = `LogEntry_${serviceName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        // For async config, we can't access TTL config at schema creation time
+        // The TTL index will need to be created later when config is available
         return {
             module: UniversalLoggerStandaloneModule_1,
             imports: [
@@ -106,6 +111,7 @@ let UniversalLoggerStandaloneModule = UniversalLoggerStandaloneModule_1 = class 
                 },
                 universal_logger_interceptor_1.UniversalLoggerInterceptor,
                 universal_logger_exception_filter_1.UniversalLoggerExceptionFilter,
+                // UniversalLoggerGuard, // Removed automatic guard registration
                 {
                     provide: core_1.APP_INTERCEPTOR,
                     useClass: universal_logger_interceptor_1.UniversalLoggerInterceptor
@@ -114,12 +120,14 @@ let UniversalLoggerStandaloneModule = UniversalLoggerStandaloneModule_1 = class 
                     provide: core_1.APP_FILTER,
                     useClass: universal_logger_exception_filter_1.UniversalLoggerExceptionFilter
                 }
+                // Removed automatic guard registration - use manually if needed
             ],
             exports: [
                 universal_logger_factory_1.UniversalLoggerFactory,
                 universal_logger_client_1.UniversalLoggerClient,
                 universal_logger_interceptor_1.UniversalLoggerInterceptor,
                 universal_logger_exception_filter_1.UniversalLoggerExceptionFilter
+                // UniversalLoggerGuard // Removed from exports
             ]
         };
     }
@@ -157,6 +165,7 @@ let UniversalLoggerStandaloneModule = UniversalLoggerStandaloneModule_1 = class 
                 },
                 universal_logger_interceptor_1.UniversalLoggerInterceptor,
                 universal_logger_exception_filter_1.UniversalLoggerExceptionFilter,
+                // UniversalLoggerGuard, // Removed automatic guard registration
                 {
                     provide: core_1.APP_INTERCEPTOR,
                     useClass: universal_logger_interceptor_1.UniversalLoggerInterceptor
@@ -165,12 +174,14 @@ let UniversalLoggerStandaloneModule = UniversalLoggerStandaloneModule_1 = class 
                     provide: core_1.APP_FILTER,
                     useClass: universal_logger_exception_filter_1.UniversalLoggerExceptionFilter
                 }
+                // Removed automatic guard registration - use manually if needed
             ],
             exports: [
                 universal_logger_factory_1.UniversalLoggerFactory,
                 universal_logger_client_1.UniversalLoggerClient,
                 universal_logger_interceptor_1.UniversalLoggerInterceptor,
                 universal_logger_exception_filter_1.UniversalLoggerExceptionFilter
+                // UniversalLoggerGuard // Removed from exports
             ]
         };
     }

@@ -33,32 +33,32 @@ let UniversalLoggerService = class UniversalLoggerService {
             defaultMeta: {
                 service: this.serviceName,
                 environment: this.environment,
-                version: this.version
+                version: this.version,
             },
-            transports: this.createTransports(loggingConfig)
+            transports: this.createTransports(loggingConfig),
         });
     }
     createTransports(loggingConfig) {
-        const transports = [];
+        const loggerTransports = [];
         if (loggingConfig.enableConsole) {
-            transports.push(new transports.Console({
-                format: winston_1.format.combine(winston_1.format.colorize(), winston_1.format.simple())
+            loggerTransports.push(new winston_1.transports.Console({
+                format: winston_1.format.combine(winston_1.format.colorize(), winston_1.format.simple()),
             }));
         }
         if (loggingConfig.enableFile) {
             const logDir = loggingConfig.logDirectory;
-            transports.push(new transports.File({
+            loggerTransports.push(new winston_1.transports.File({
                 filename: `${logDir}/error.log`,
                 level: 'error',
                 maxsize: loggingConfig.maxFileSize,
-                maxFiles: loggingConfig.maxFiles
-            }), new transports.File({
+                maxFiles: loggingConfig.maxFiles,
+            }), new winston_1.transports.File({
                 filename: `${logDir}/combined.log`,
                 maxsize: loggingConfig.maxFileSize,
-                maxFiles: loggingConfig.maxFiles
+                maxFiles: loggingConfig.maxFiles,
             }));
         }
-        return transports;
+        return loggerTransports;
     }
     async createLogEntry(level, message, metadata, context) {
         const logEntry = {
@@ -72,7 +72,7 @@ let UniversalLoggerService = class UniversalLoggerService {
             environment: this.environment,
             version: this.version,
             tags: metadata?.tags || [],
-            severity: this.getSeverityLevel(level)
+            severity: this.getSeverityLevel(level),
         };
         try {
             await this.logModel.create(logEntry);
@@ -84,12 +84,17 @@ let UniversalLoggerService = class UniversalLoggerService {
     }
     getSeverityLevel(level) {
         switch (level) {
-            case 'error': return 'critical';
-            case 'warn': return 'high';
-            case 'info': return 'medium';
+            case 'error':
+                return 'critical';
+            case 'warn':
+                return 'high';
+            case 'info':
+                return 'medium';
             case 'debug':
-            case 'verbose': return 'low';
-            default: return 'medium';
+            case 'verbose':
+                return 'low';
+            default:
+                return 'medium';
         }
     }
     log(message, context, metadata) {
@@ -122,8 +127,10 @@ let UniversalLoggerService = class UniversalLoggerService {
             path: req.originalUrl,
             response: {
                 statusCode,
-                headers: apiConfig.logHeaders ? this.sanitizeHeaders(res.getHeaders()) : undefined
-            }
+                headers: apiConfig.logHeaders
+                    ? this.sanitizeHeaders(res.getHeaders())
+                    : undefined,
+            },
         };
         if (apiConfig.logQuery && req.query) {
             apiCall.query = req.query;
@@ -144,63 +151,51 @@ let UniversalLoggerService = class UniversalLoggerService {
             userId: req.user?.id,
             sessionId: req.session?.id,
             ip: req.ip,
-            userAgent: req.headers['user-agent']
+            userAgent: req.headers['user-agent'],
         });
         if (duration > apiConfig.slowRequestThreshold) {
             this.warn(`Slow API request: ${req.method} ${req.originalUrl} took ${duration}ms`, 'PERFORMANCE', {
                 requestId,
                 duration,
-                threshold: apiConfig.slowRequestThreshold
+                threshold: apiConfig.slowRequestThreshold,
             });
         }
     }
     logPerformance(operation, duration, metadata) {
         if (!this.config.isFeatureEnabled('performance'))
             return;
-        const level = duration > 1000 ? 'warn' : 'info';
+        const level = duration > 1000 ? 'warn' : 'log';
         this[level](`Performance: ${operation} took ${duration}ms`, 'PERFORMANCE', {
             operation,
             duration,
-            ...metadata
+            ...metadata,
         });
     }
     logDatabaseQuery(query, duration, table, operation) {
         if (!this.config.isFeatureEnabled('performance'))
             return;
-        const performanceData = {
-            databaseQueries: [{
-                    query,
-                    duration,
-                    table,
-                    operation
-                }]
-        };
         this.log(`Database query executed in ${duration}ms`, 'DATABASE', {
             query,
             duration,
             table,
             operation,
-            performance: performanceData
+            performance: {
+                databaseQueries: [{ query, duration, table, operation }],
+            },
         });
     }
     logExternalCall(url, method, duration, statusCode, response) {
         if (!this.config.isFeatureEnabled('performance'))
             return;
-        const performanceData = {
-            externalCalls: [{
-                    url,
-                    method,
-                    duration,
-                    statusCode
-                }]
-        };
         this.log(`External call: ${method} ${url}`, 'EXTERNAL', {
             url,
             method,
             duration,
             statusCode,
             response,
-            performance: performanceData
+            performance: {
+                externalCalls: [{ url, method, duration, statusCode }],
+            },
         });
     }
     logSecurity(event, metadata) {
@@ -208,45 +203,45 @@ let UniversalLoggerService = class UniversalLoggerService {
             return;
         this.warn(`Security event: ${event}`, 'SECURITY', {
             event,
-            ...metadata
+            ...metadata,
         });
     }
     logAuthEvent(event, userId, success = true, metadata) {
         if (!this.config.isFeatureEnabled('security'))
             return;
-        const level = success ? 'info' : 'warn';
+        const level = success ? 'log' : 'warn';
         this[level](`Auth event: ${event}`, 'AUTH', {
             event,
             userId,
             success,
-            ...metadata
+            ...metadata,
         });
     }
     logBusinessLogic(operation, data, context) {
         if (!this.config.isFeatureEnabled('business'))
             return;
-        this.info(`Business logic: ${operation}`, context, {
+        this.log(`Business logic: ${operation}`, context, {
             operation,
             data,
-            tags: ['business-logic']
+            tags: ['business-logic'],
         });
     }
     logUserAction(action, userId, metadata) {
         if (!this.config.isFeatureEnabled('business'))
             return;
-        this.info(`User action: ${action}`, 'USER_ACTION', {
+        this.log(`User action: ${action}`, 'USER_ACTION', {
             action,
             userId,
-            ...metadata
+            ...metadata,
         });
     }
     logFeatureUsage(feature, userId, metadata) {
         if (!this.config.isFeatureEnabled('business'))
             return;
-        this.info(`Feature usage: ${feature}`, 'FEATURE_USAGE', {
+        this.log(`Feature usage: ${feature}`, 'FEATURE_USAGE', {
             feature,
             userId,
-            ...metadata
+            ...metadata,
         });
     }
     logSystemMetrics() {
@@ -254,20 +249,19 @@ let UniversalLoggerService = class UniversalLoggerService {
             return;
         const memUsage = process.memoryUsage();
         const cpuUsage = process.cpuUsage();
-        const performanceData = {
-            memoryUsage: {
-                heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
-                heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
-                external: Math.round(memUsage.external / 1024 / 1024),
-                rss: Math.round(memUsage.rss / 1024 / 1024)
-            },
-            cpuUsage: {
-                user: cpuUsage.user,
-                system: cpuUsage.system
-            }
-        };
         this.debug('System metrics', 'SYSTEM', {
-            performance: performanceData
+            performance: {
+                memoryUsage: {
+                    heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+                    heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+                    external: Math.round(memUsage.external / 1024 / 1024),
+                    rss: Math.round(memUsage.rss / 1024 / 1024),
+                },
+                cpuUsage: {
+                    user: cpuUsage.user,
+                    system: cpuUsage.system,
+                },
+            },
         });
     }
     async getLogs(query) {
@@ -308,39 +302,39 @@ let UniversalLoggerService = class UniversalLoggerService {
         return this.logModel.aggregate([
             {
                 $match: {
-                    timestamp: { $gte: timeRange.start, $lte: timeRange.end }
-                }
+                    timestamp: { $gte: timeRange.start, $lte: timeRange.end },
+                },
             },
             {
                 $group: {
                     _id: {
                         level: '$level',
                         service: '$service',
-                        severity: '$severity'
+                        severity: '$severity',
                     },
                     count: { $sum: 1 },
                     avgDuration: { $avg: '$duration' },
                     maxDuration: { $max: '$duration' },
-                    minDuration: { $min: '$duration' }
-                }
+                    minDuration: { $min: '$duration' },
+                },
             },
             {
-                $sort: { count: -1 }
-            }
+                $sort: { count: -1 },
+            },
         ]);
     }
     async cleanupOldLogs(daysToKeep = 30) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
         const result = await this.logModel.deleteMany({
-            timestamp: { $lt: cutoffDate }
+            timestamp: { $lt: cutoffDate },
         });
         return result.deletedCount || 0;
     }
     sanitizeHeaders(headers) {
         const sanitized = { ...headers };
         const sensitiveHeaders = this.config.getApiConfig().sensitiveHeaders;
-        sensitiveHeaders.forEach(header => {
+        sensitiveHeaders.forEach((header) => {
             if (sanitized[header]) {
                 sanitized[header] = '[REDACTED]';
             }
@@ -348,10 +342,9 @@ let UniversalLoggerService = class UniversalLoggerService {
         return sanitized;
     }
     isBodyLoggable(body, maxSize) {
-        const bodyStr = JSON.stringify(body);
-        return bodyStr.length <= maxSize;
+        return JSON.stringify(body).length <= maxSize;
     }
-    getResponseBody(res) {
+    getResponseBody(_res) {
         return undefined;
     }
 };

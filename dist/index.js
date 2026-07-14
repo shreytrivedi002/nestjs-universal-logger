@@ -14,6 +14,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// Main exports for the universal logger package
 __exportStar(require("./standalone"), exports);
+// Re-export types and interfaces
 __exportStar(require("./interfaces/config.interface"), exports);
 __exportStar(require("./schemas/log-entry.schema"), exports);

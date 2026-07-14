@@ -22,6 +22,7 @@ let UniversalLoggerInterceptor = class UniversalLoggerInterceptor {
         const request = context.switchToHttp().getRequest();
         const response = context.switchToHttp().getResponse();
         const startTime = perf_hooks_1.performance.now();
+        // Generate request ID if not present
         if (!request.headers['x-request-id']) {
             request.headers['x-request-id'] = this.generateRequestId();
         }
@@ -31,14 +32,17 @@ let UniversalLoggerInterceptor = class UniversalLoggerInterceptor {
         const userAgent = request.headers['user-agent'] || '';
         const ip = this.getClientIp(request);
         const userId = request.user?.id;
+        // Log request start with payload
         this.logRequestStart(request, requestId, method, url, ip, userAgent, userId);
         return next.handle().pipe((0, operators_1.tap)((data) => {
             const duration = perf_hooks_1.performance.now() - startTime;
             const statusCode = response.statusCode;
+            // Log successful response with payload
             this.logRequestSuccess(request, response, data, duration, requestId, method, url, statusCode, ip, userAgent, userId);
         }), (0, operators_1.catchError)((error) => {
             const duration = perf_hooks_1.performance.now() - startTime;
             const statusCode = response.statusCode || 500;
+            // Log error response with details
             this.logRequestError(request, response, error, duration, requestId, method, url, statusCode, ip, userAgent, userId);
             throw error;
         }));
@@ -97,33 +101,43 @@ let UniversalLoggerInterceptor = class UniversalLoggerInterceptor {
     }
     categorizeRequest(method, url) {
         const path = url.toLowerCase();
+        // Authentication & Authorization
         if (path.includes('/auth') || path.includes('/login') || path.includes('/register') || path.includes('/logout')) {
             return 'AUTH';
         }
+        // User Management
         if (path.includes('/users') || path.includes('/user') || path.includes('/profile')) {
             return 'USER_MANAGEMENT';
         }
+        // Payment & Billing
         if (path.includes('/payment') || path.includes('/billing') || path.includes('/invoice') || path.includes('/subscription')) {
             return 'PAYMENT';
         }
+        // File Operations
         if (path.includes('/upload') || path.includes('/file') || path.includes('/image') || path.includes('/document')) {
             return 'FILE_OPERATIONS';
         }
+        // Data Operations
         if (path.includes('/data') || path.includes('/export') || path.includes('/import') || path.includes('/report')) {
             return 'DATA_OPERATIONS';
         }
+        // Search & Query
         if (path.includes('/search') || path.includes('/query') || path.includes('/filter')) {
             return 'SEARCH';
         }
+        // Health & Monitoring
         if (path.includes('/health') || path.includes('/status') || path.includes('/metrics')) {
             return 'HEALTH';
         }
+        // Admin Operations
         if (path.includes('/admin') || path.includes('/management') || path.includes('/config')) {
             return 'ADMIN';
         }
+        // API Operations
         if (path.includes('/api/')) {
             return 'API';
         }
+        // Default categorization
         return 'GENERAL';
     }
     sanitizeHeaders(headers) {
@@ -167,10 +181,12 @@ let UniversalLoggerInterceptor = class UniversalLoggerInterceptor {
     sanitizeResponseBody(data, statusCode) {
         if (!data)
             return undefined;
+        // Don't log response body for large responses or binary data
         const dataStr = JSON.stringify(data);
         if (dataStr.length > 10000) {
             return { message: '[RESPONSE_TOO_LARGE]', size: dataStr.length };
         }
+        // Don't log binary data
         if (typeof data === 'string' && data.includes('')) {
             return { message: '[BINARY_DATA]' };
         }

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LogEntrySchema = exports.UniversalLoggerGuard = exports.UniversalLoggerExceptionFilter = exports.UniversalLoggerInterceptor = exports.UniversalLoggerStandaloneModule = exports.UniversalLoggerClient = exports.UniversalLoggerFactory = exports.UniversalLoggerStandalone = void 0;
+// Standalone logging exports - No API calls, direct function calls only
 var universal_logger_standalone_1 = require("./universal-logger-standalone");
 Object.defineProperty(exports, "UniversalLoggerStandalone", { enumerable: true, get: function () { return universal_logger_standalone_1.UniversalLoggerStandalone; } });
 var universal_logger_factory_1 = require("./universal-logger-factory");
@@ -9,6 +10,7 @@ var universal_logger_client_1 = require("./universal-logger-client");
 Object.defineProperty(exports, "UniversalLoggerClient", { enumerable: true, get: function () { return universal_logger_client_1.UniversalLoggerClient; } });
 var universal_logger_standalone_module_1 = require("./universal-logger-standalone.module");
 Object.defineProperty(exports, "UniversalLoggerStandaloneModule", { enumerable: true, get: function () { return universal_logger_standalone_module_1.UniversalLoggerStandaloneModule; } });
+// Automatic system-wide logging components
 var universal_logger_interceptor_1 = require("./universal-logger-interceptor");
 Object.defineProperty(exports, "UniversalLoggerInterceptor", { enumerable: true, get: function () { return universal_logger_interceptor_1.UniversalLoggerInterceptor; } });
 var universal_logger_exception_filter_1 = require("./universal-logger-exception-filter");

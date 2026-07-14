@@ -14,6 +14,7 @@ exports.createLogEntrySchema = createLogEntrySchema;
 exports.getLogCollectionName = getLogCollectionName;
 exports.addTTLIndexToSchema = addTTLIndexToSchema;
 const mongoose_1 = require("@nestjs/mongoose");
+// Base schema without collection name - will be set dynamically
 let LogEntrySchema = class LogEntrySchema {
 };
 exports.LogEntrySchema = LogEntrySchema;
@@ -115,10 +116,31 @@ exports.LogEntrySchema = LogEntrySchema = __decorate([
     })
 ], LogEntrySchema);
 exports.logEntrySchema = mongoose_1.SchemaFactory.createForClass(LogEntrySchema);
+/**
+ * Factory function to create a log entry schema with dynamic collection name and optional TTL configuration.
+ *
+ * @param serviceName - The service name used to generate the collection name
+ * @param ttlConfig - Optional TTL configuration for automatic document expiration
+ * @param ttlConfig.enabled - Whether TTL indexing is enabled
+ * @param ttlConfig.expireAfterSeconds - Time in seconds after which documents will be automatically deleted
+ * @param ttlConfig.indexField - Field to use for TTL index ('timestamp', 'created_at', or 'updated_at')
+ * @returns Mongoose schema configured with indexes and optional TTL
+ * @example
+ * ```typescript
+ * // Create schema with 30-day TTL
+ * const schema = createLogEntrySchema('my-service', {
+ *   enabled: true,
+ *   expireAfterSeconds: 2592000, // 30 days
+ *   indexField: 'timestamp'
+ * });
+ * ```
+ */
 function createLogEntrySchema(serviceName, ttlConfig) {
     const schema = mongoose_1.SchemaFactory.createForClass(LogEntrySchema);
+    // Set collection name based on service
     const collectionName = `logs_${serviceName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
     schema.set('collection', collectionName);
+    // Add regular indexes
     schema.index({ timestamp: -1 });
     schema.index({ service: 1, timestamp: -1 });
     schema.index({ level: 1, timestamp: -1 });
@@ -130,6 +152,7 @@ function createLogEntrySchema(serviceName, ttlConfig) {
     schema.index({ 'apiCall.path': 1, timestamp: -1 });
     schema.index({ 'apiCall.method': 1, timestamp: -1 });
     schema.index({ statusCode: 1, timestamp: -1 });
+    // Add TTL index if configured
     if (ttlConfig?.enabled && ttlConfig.expireAfterSeconds) {
         const indexField = ttlConfig.indexField || 'timestamp';
         const ttlIndexOptions = { expireAfterSeconds: ttlConfig.expireAfterSeconds };
@@ -147,9 +170,39 @@ function createLogEntrySchema(serviceName, ttlConfig) {
     }
     return schema;
 }
+/**
+ * Helper function to generate a consistent collection name for a service.
+ *
+ * @param serviceName - The service name to generate collection name for
+ * @returns MongoDB collection name in format: logs_{sanitized_service_name}
+ * @example
+ * ```typescript
+ * const collectionName = getLogCollectionName('my-service-name');
+ * // Returns: 'logs_my_service_name'
+ * ```
+ */
 function getLogCollectionName(serviceName) {
     return `logs_${serviceName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 }
+/**
+ * Helper function to add TTL index to an existing schema (useful for async configurations).
+ * This function can be called after schema creation when TTL configuration becomes available.
+ *
+ * @param schema - The Mongoose schema to add TTL index to
+ * @param ttlConfig - TTL configuration object
+ * @param ttlConfig.enabled - Whether TTL indexing should be enabled
+ * @param ttlConfig.expireAfterSeconds - Time in seconds after which documents will be automatically deleted
+ * @param ttlConfig.indexField - Field to use for TTL index ('timestamp', 'created_at', or 'updated_at')
+ * @example
+ * ```typescript
+ * const schema = SchemaFactory.createForClass(LogEntrySchema);
+ * addTTLIndexToSchema(schema, {
+ *   enabled: true,
+ *   expireAfterSeconds: 604800, // 7 days
+ *   indexField: 'created_at'
+ * });
+ * ```
+ */
 function addTTLIndexToSchema(schema, ttlConfig) {
     if (ttlConfig?.enabled && ttlConfig.expireAfterSeconds) {
         const indexField = ttlConfig.indexField || 'timestamp';

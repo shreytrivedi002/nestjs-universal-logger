@@ -30,7 +30,8 @@ let UniversalLoggingMiddleware = class UniversalLoggingMiddleware {
         if (this.shouldExcludePath(req.originalUrl, apiConfig.excludePaths)) {
             return next();
         }
-        if (apiConfig.includePaths.length > 0 && !this.shouldIncludePath(req.originalUrl, apiConfig.includePaths)) {
+        if (apiConfig.includePaths.length > 0 &&
+            !this.shouldIncludePath(req.originalUrl, apiConfig.includePaths)) {
             return next();
         }
         this.logger.log(`Request started: ${req.method} ${req.originalUrl}`, 'HTTP', {
@@ -38,21 +39,21 @@ let UniversalLoggingMiddleware = class UniversalLoggingMiddleware {
             userId: req.user?.id,
             sessionId: req.session?.id,
             ip: req.ip,
-            userAgent: req.headers['user-agent']
+            userAgent: req.headers['user-agent'],
         });
-        const originalSend = res.send;
-        res.send = function (body) {
+        const originalSend = res.send.bind(res);
+        res.send = (body) => {
             const duration = perf_hooks_1.performance.now() - start;
             this.logger.logApiCall(req, res, duration, res.statusCode);
             this.logSecurityEvents(req, res, duration);
-            return originalSend.call(this, body);
-        }.bind(this);
+            return originalSend(body);
+        };
         res.on('finish', () => {
             const duration = perf_hooks_1.performance.now() - start;
             if (this.config.isFeatureEnabled('performance')) {
                 this.logger.logPerformance(`${req.method} ${req.originalUrl}`, duration, {
                     requestId,
-                    statusCode: res.statusCode
+                    statusCode: res.statusCode,
                 });
             }
             if (Math.random() < 0.01) {
@@ -65,7 +66,7 @@ let UniversalLoggingMiddleware = class UniversalLoggingMiddleware {
         return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
     shouldExcludePath(path, excludePaths) {
-        return excludePaths.some(excludePath => {
+        return excludePaths.some((excludePath) => {
             if (excludePath.endsWith('*')) {
                 return path.startsWith(excludePath.slice(0, -1));
             }
@@ -73,14 +74,14 @@ let UniversalLoggingMiddleware = class UniversalLoggingMiddleware {
         });
     }
     shouldIncludePath(path, includePaths) {
-        return includePaths.some(includePath => {
+        return includePaths.some((includePath) => {
             if (includePath.endsWith('*')) {
                 return path.startsWith(includePath.slice(0, -1));
             }
             return path === includePath;
         });
     }
-    logSecurityEvents(req, res, duration) {
+    logSecurityEvents(req, res, _duration) {
         if (!this.config.isFeatureEnabled('security'))
             return;
         const securityConfig = this.config.getSecurityConfig();
@@ -89,7 +90,7 @@ let UniversalLoggingMiddleware = class UniversalLoggingMiddleware {
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
                 path: req.originalUrl,
-                method: req.method
+                method: req.method,
             });
         }
         if (res.statusCode === 403) {
@@ -98,14 +99,14 @@ let UniversalLoggingMiddleware = class UniversalLoggingMiddleware {
                 userAgent: req.headers['user-agent'],
                 path: req.originalUrl,
                 method: req.method,
-                userId: req.user?.id
+                userId: req.user?.id,
             });
         }
-        if (securityConfig.ipBlacklist.includes(req.ip)) {
+        if (securityConfig.ipBlacklist.includes(req.ip || '')) {
             this.logger.logSecurity('Blocked IP access attempt', {
                 ip: req.ip,
                 userAgent: req.headers['user-agent'],
-                path: req.originalUrl
+                path: req.originalUrl,
             });
         }
         if (this.isSuspiciousActivity(req)) {
@@ -114,20 +115,15 @@ let UniversalLoggingMiddleware = class UniversalLoggingMiddleware {
                 userAgent: req.headers['user-agent'],
                 path: req.originalUrl,
                 method: req.method,
-                reason: 'Multiple rapid requests'
+                reason: 'Multiple rapid requests',
             });
         }
     }
     isSuspiciousActivity(req) {
-        const suspiciousPatterns = [
-            /\.\.\//,
-            /<script/i,
-            /union\s+select/i,
-            /eval\s*\(/i,
-        ];
+        const suspiciousPatterns = [/\.\.\//, /<script/i, /union\s+select/i, /eval\s*\(/i];
         const path = req.originalUrl.toLowerCase();
         const userAgent = (req.headers['user-agent'] || '').toLowerCase();
-        return suspiciousPatterns.some(pattern => pattern.test(path) || pattern.test(userAgent));
+        return suspiciousPatterns.some((pattern) => pattern.test(path) || pattern.test(userAgent));
     }
 };
 exports.UniversalLoggingMiddleware = UniversalLoggingMiddleware;

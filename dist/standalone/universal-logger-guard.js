@@ -23,9 +23,11 @@ let UniversalLoggerGuard = class UniversalLoggerGuard {
         const userAgent = request.headers['user-agent'] || '';
         const ip = this.getClientIp(request);
         const requestId = request.headers['x-request-id'];
+        // Extract authentication info
         const authHeader = request.headers.authorization;
         const token = this.extractToken(authHeader);
         const userId = request.user?.id;
+        // Log authentication attempt
         this.logger.log('Authentication check started', 'AUTH', {
             requestId,
             method,
@@ -38,8 +40,10 @@ let UniversalLoggerGuard = class UniversalLoggerGuard {
             timestamp: new Date().toISOString()
         });
         try {
+            // Your authentication logic here
             const isAuthenticated = this.validateAuthentication(request);
             if (isAuthenticated) {
+                // Log successful authentication
                 this.logger.logAuthEvent('authentication_success', userId, true, {
                     requestId,
                     method,
@@ -51,6 +55,7 @@ let UniversalLoggerGuard = class UniversalLoggerGuard {
                 return true;
             }
             else {
+                // Log failed authentication
                 this.logger.logAuthEvent('authentication_failed', userId, false, {
                     requestId,
                     method,
@@ -64,6 +69,7 @@ let UniversalLoggerGuard = class UniversalLoggerGuard {
             }
         }
         catch (error) {
+            // Log authentication error
             this.logger.logAuthEvent('authentication_error', userId, false, {
                 requestId,
                 method,
@@ -78,15 +84,19 @@ let UniversalLoggerGuard = class UniversalLoggerGuard {
         }
     }
     validateAuthentication(request) {
+        // This is a placeholder - implement your actual authentication logic
         const authHeader = request.headers.authorization;
         if (!authHeader) {
             return false;
         }
+        // Example: Check if token is valid
         const token = this.extractToken(authHeader);
         if (!token) {
             return false;
         }
-        return true;
+        // Add your token validation logic here
+        // For example: verify JWT, check against database, etc.
+        return true; // Placeholder - replace with actual validation
     }
     extractToken(authHeader) {
         if (!authHeader) {

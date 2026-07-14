@@ -77,9 +77,27 @@ export interface UniversalLoggerConfig {
         archiveOldLogs?: boolean;
         archivePath?: string;
     };
+    /**
+     * TTL (Time To Live) Configuration for automatic log cleanup
+     *
+     * Configures MongoDB TTL indexes to automatically delete log documents after a specified time period.
+     * This helps manage storage space and maintain database performance by removing old logs.
+     *
+     * @example
+     * ```typescript
+     * ttl: {
+     *   enabled: true,
+     *   expireAfterSeconds: 2592000, // 30 days
+     *   indexField: 'timestamp'
+     * }
+     * ```
+     */
     ttl?: {
+        /** Enable automatic document expiration using MongoDB TTL indexes */
         enabled?: boolean;
+        /** Time in seconds after which documents will be automatically deleted by MongoDB */
         expireAfterSeconds?: number;
+        /** Field to use for TTL index - defaults to 'timestamp' if not specified */
         indexField?: 'timestamp' | 'created_at' | 'updated_at';
     };
     export?: {

@@ -12,32 +12,37 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const universal_logger_service_1 = require("./universal-logger.service");
 const universal_logging_middleware_1 = require("./universal-logging.middleware");
-const universal_logger_controller_1 = require("./universal-logger.controller");
 const universal_logger_config_1 = require("./universal-logger.config");
 const log_entry_schema_1 = require("./schemas/log-entry.schema");
+/**
+ * Legacy NestJS module API.
+ *
+ * Note: published builds referenced a UniversalLoggerController that was never
+ * shipped on npm. That dependency is intentionally omitted so the module builds.
+ * Prefer UniversalLoggerStandaloneModule for new integrations.
+ */
 let UniversalLoggerModule = UniversalLoggerModule_1 = class UniversalLoggerModule {
     static forRoot(config) {
         return {
             module: UniversalLoggerModule_1,
             imports: [
                 mongoose_1.MongooseModule.forFeature([
-                    { name: 'LogEntry', schema: log_entry_schema_1.LogEntrySchema }
-                ])
+                    { name: 'LogEntry', schema: log_entry_schema_1.logEntrySchema },
+                ]),
             ],
             providers: [
                 {
                     provide: universal_logger_config_1.UniversalLoggerConfig,
-                    useValue: new universal_logger_config_1.UniversalLoggerConfig(config)
+                    useValue: new universal_logger_config_1.UniversalLoggerConfig(config),
                 },
                 universal_logger_service_1.UniversalLoggerService,
-                universal_logging_middleware_1.UniversalLoggingMiddleware
+                universal_logging_middleware_1.UniversalLoggingMiddleware,
             ],
-            controllers: [universal_logger_controller_1.UniversalLoggerController],
             exports: [
                 universal_logger_service_1.UniversalLoggerService,
                 universal_logging_middleware_1.UniversalLoggingMiddleware,
-                universal_logger_config_1.UniversalLoggerConfig
-            ]
+                universal_logger_config_1.UniversalLoggerConfig,
+            ],
         };
     }
     static forRootAsync(options) {
@@ -45,24 +50,28 @@ let UniversalLoggerModule = UniversalLoggerModule_1 = class UniversalLoggerModul
             module: UniversalLoggerModule_1,
             imports: [
                 mongoose_1.MongooseModule.forFeature([
-                    { name: 'LogEntry', schema: log_entry_schema_1.LogEntrySchema }
-                ])
+                    { name: 'LogEntry', schema: log_entry_schema_1.logEntrySchema },
+                ]),
             ],
             providers: [
                 {
                     provide: universal_logger_config_1.UniversalLoggerConfig,
-                    useFactory: options.useFactory,
-                    inject: options.inject || []
+                    useFactory: async (...args) => {
+                        const config = await options.useFactory(...args);
+                        return config instanceof universal_logger_config_1.UniversalLoggerConfig
+                            ? config
+                            : new universal_logger_config_1.UniversalLoggerConfig(config);
+                    },
+                    inject: options.inject || [],
                 },
                 universal_logger_service_1.UniversalLoggerService,
-                universal_logging_middleware_1.UniversalLoggingMiddleware
+                universal_logging_middleware_1.UniversalLoggingMiddleware,
             ],
-            controllers: [universal_logger_controller_1.UniversalLoggerController],
             exports: [
                 universal_logger_service_1.UniversalLoggerService,
                 universal_logging_middleware_1.UniversalLoggingMiddleware,
-                universal_logger_config_1.UniversalLoggerConfig
-            ]
+                universal_logger_config_1.UniversalLoggerConfig,
+            ],
         };
     }
 };
