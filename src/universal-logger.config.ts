@@ -12,6 +12,7 @@ export class UniversalLoggerConfig implements ConfigInterface {
   ttl?: ConfigInterface['ttl'];
   export?: ConfigInterface['export'];
   alerts?: ConfigInterface['alerts'];
+  batch?: ConfigInterface['batch'];
 
   constructor(config: ConfigInterface = {}) {
     this.mongodb = config.mongodb;
@@ -25,6 +26,7 @@ export class UniversalLoggerConfig implements ConfigInterface {
     this.ttl = config.ttl;
     this.export = config.export;
     this.alerts = config.alerts;
+    this.batch = config.batch;
   }
 
   getLoggingConfig(): Required<
@@ -62,6 +64,8 @@ export class UniversalLoggerConfig implements ConfigInterface {
       | 'logResponses'
       | 'logHeaders'
       | 'logBody'
+      | 'logBodyMode'
+      | 'logResponseBodyMode'
       | 'logQuery'
       | 'sensitiveHeaders'
       | 'excludePaths'
@@ -76,6 +80,11 @@ export class UniversalLoggerConfig implements ConfigInterface {
       logResponses: this.api?.logResponses !== false,
       logHeaders: this.api?.logHeaders !== false,
       logBody: this.api?.logBody !== false,
+      logBodyMode: this.api?.logBodyMode || (this.api?.logBody === false ? 'none' : this.api?.logBody === true ? 'all' : 'errors'),
+      logResponseBodyMode:
+        this.api?.logResponseBodyMode ||
+        this.api?.logBodyMode ||
+        (this.api?.logBody === false ? 'none' : this.api?.logBody === true ? 'all' : 'errors'),
       logQuery: this.api?.logQuery !== false,
       sensitiveHeaders: this.api?.sensitiveHeaders || [
         'authorization',

@@ -14,6 +14,8 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("mongoose");
 const winston_1 = require("winston");
 const uuid_1 = require("uuid");
+const create_batch_writer_1 = require("./create-batch-writer");
+const body_utils_1 = require("./body-utils");
 /**
  * UniversalLoggerStandalone - Main logging service for NestJS applications
  *
@@ -24,6 +26,7 @@ const uuid_1 = require("uuid");
  * - Business metrics logging
  * - TTL-based automatic cleanup
  * - MongoDB storage with per-service collections
+ * - Batched writes via Redis (when available) or in-memory buffer
  *
  * @example
  * ```typescript
@@ -47,6 +50,7 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
      * @param version - Optional version override
      */
     constructor(logModel, config, serviceName, environment, version) {
+        this.batchInitPromise = null;
         this.logModel = logModel;
         this.config = config;
         this.serviceName = serviceName || config.logging?.serviceName || 'default-service';
@@ -62,6 +66,28 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
             },
             transports: this.createTransports(config.logging || {})
         });
+        this.batchWriter = (0, create_batch_writer_1.createInitialBatchWriter)(logModel, config.batch);
+        this.batchInitPromise = this.initializeBatchTransport();
+    }
+    /**
+     * Which batch transport is active (`memory`, `redis`, or `none`).
+     */
+    getBatchTransport() {
+        return this.batchWriter?.transport ?? 'none';
+    }
+    async initializeBatchTransport() {
+        if (!this.batchWriter) {
+            return;
+        }
+        const redisWriter = await (0, create_batch_writer_1.tryCreateRedisBatchWriter)(this.logModel, this.config.batch, this.serviceName);
+        if (!redisWriter) {
+            return;
+        }
+        // Drain memory buffer to Mongo, then switch to Redis
+        const previous = this.batchWriter;
+        await previous.flush();
+        await previous.destroy();
+        this.batchWriter = redisWriter;
     }
     createTransports(loggingConfig) {
         const transportArray = [];
@@ -123,14 +149,19 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
         if (apiConfig.logQuery && req.query) {
             apiCall.query = req.query;
         }
-        if (apiConfig.logBody && req.body && this.isBodyLoggable(req.body, apiConfig.maxBodySize || 1024)) {
-            apiCall.body = req.body;
+        const requestBodyMode = (0, body_utils_1.resolveRequestBodyMode)(apiConfig);
+        if ((0, body_utils_1.shouldLogBody)(requestBodyMode, statusCode) && req.body !== undefined) {
+            apiCall.body = (0, body_utils_1.prepareLogBody)(req.body, (0, body_utils_1.getMaxBodySize)(apiConfig));
         }
         if (apiConfig.logHeaders) {
             apiCall.headers = this.sanitizeHeaders(req.headers || {});
         }
-        if (statusCode >= 400 || apiConfig.logResponses) {
-            apiCall.response.body = this.getResponseBody(res);
+        const responseBodyMode = (0, body_utils_1.resolveResponseBodyMode)(apiConfig);
+        if ((0, body_utils_1.shouldLogBody)(responseBodyMode, statusCode)) {
+            const responseBody = this.getResponseBody(res);
+            if (responseBody !== undefined) {
+                apiCall.response.body = (0, body_utils_1.prepareLogBody)(responseBody, (0, body_utils_1.getMaxBodySize)(apiConfig));
+            }
         }
         await this.log(`API Call: ${req.method} ${req.originalUrl}`, 'API', {
             requestId,
@@ -437,6 +468,29 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
         return result.deletedCount || 0;
     }
     // Helper methods
+    /**
+     * Flush any buffered MongoDB writes. Call on shutdown.
+     */
+    async flush() {
+        if (this.batchInitPromise) {
+            await this.batchInitPromise;
+        }
+        if (this.batchWriter) {
+            await this.batchWriter.flush();
+        }
+    }
+    /**
+     * Stop the batch timer and flush remaining logs.
+     */
+    async destroy() {
+        if (this.batchInitPromise) {
+            await this.batchInitPromise;
+        }
+        if (this.batchWriter) {
+            await this.batchWriter.destroy();
+            this.batchWriter = null;
+        }
+    }
     async createLogEntry(level, message, metadata, context) {
         const logEntry = {
             id: (0, uuid_1.v4)(),
@@ -452,7 +506,12 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
             severity: this.getSeverityLevel(level)
         };
         try {
-            await this.logModel.create(logEntry);
+            if (this.batchWriter) {
+                this.batchWriter.enqueue(logEntry);
+            }
+            else {
+                await this.logModel.create(logEntry);
+            }
         }
         catch (error) {
             console.error('Failed to save log to MongoDB:', error);
@@ -479,12 +538,8 @@ let UniversalLoggerStandalone = class UniversalLoggerStandalone {
         });
         return sanitized;
     }
-    isBodyLoggable(body, maxSize) {
-        const bodyStr = JSON.stringify(body);
-        return bodyStr.length <= maxSize;
-    }
     getResponseBody(res) {
-        // This is a simplified version - in practice you'd need to capture the response body
+        // Response body capture requires interceptor cooperation; placeholder for manual logApiCall.
         return undefined;
     }
 };

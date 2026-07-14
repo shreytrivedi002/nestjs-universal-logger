@@ -10,6 +10,7 @@ import { LogEntry, LogQuery, UniversalLoggerConfig } from '../interfaces/config.
  * - Business metrics logging
  * - TTL-based automatic cleanup
  * - MongoDB storage with per-service collections
+ * - Batched writes via Redis (when available) or in-memory buffer
  *
  * @example
  * ```typescript
@@ -29,6 +30,8 @@ export declare class UniversalLoggerStandalone {
     private readonly environment;
     private readonly version;
     private readonly logModel;
+    private batchWriter;
+    private batchInitPromise;
     /**
      * Initialize the Universal Logger with configuration and dependencies
      *
@@ -39,6 +42,11 @@ export declare class UniversalLoggerStandalone {
      * @param version - Optional version override
      */
     constructor(logModel: Model<LogEntry>, config: UniversalLoggerConfig, serviceName?: string, environment?: string, version?: string);
+    /**
+     * Which batch transport is active (`memory`, `redis`, or `none`).
+     */
+    getBatchTransport(): 'memory' | 'redis' | 'none';
+    private initializeBatchTransport;
     private createTransports;
     log(message: string, context?: string, metadata?: Record<string, any>): Promise<void>;
     error(message: string, trace?: string, context?: string, metadata?: Record<string, any>): Promise<void>;
@@ -64,9 +72,16 @@ export declare class UniversalLoggerStandalone {
     getTopErrors(limit?: number, days?: number): Promise<any>;
     getPerformanceMetrics(hours?: number): Promise<any>;
     cleanupOldLogs(daysToKeep?: number): Promise<number>;
+    /**
+     * Flush any buffered MongoDB writes. Call on shutdown.
+     */
+    flush(): Promise<void>;
+    /**
+     * Stop the batch timer and flush remaining logs.
+     */
+    destroy(): Promise<void>;
     private createLogEntry;
     private getSeverityLevel;
     private sanitizeHeaders;
-    private isBodyLoggable;
     private getResponseBody;
 }

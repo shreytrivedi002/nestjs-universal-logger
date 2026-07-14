@@ -5,5 +5,9 @@ export { UniversalLoggerStandaloneModule } from './universal-logger-standalone.m
 export { UniversalLoggerInterceptor } from './universal-logger-interceptor';
 export { UniversalLoggerExceptionFilter } from './universal-logger-exception-filter';
 export { UniversalLoggerGuard } from './universal-logger-guard';
+export { LogBatchWriter } from './log-batch-writer';
+export { RedisLogBatchWriter } from './redis-log-batch-writer';
+export type { LogBatchSink } from './log-batch-sink';
+export { prepareLogBody, resolveRequestBodyMode, resolveResponseBodyMode, shouldLogBody, } from './body-utils';
 export { LogEntry, LogQuery, UniversalLoggerConfig } from '../interfaces/config.interface';
 export { LogEntrySchema } from '../schemas/log-entry.schema';

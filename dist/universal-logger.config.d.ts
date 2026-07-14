@@ -11,9 +11,10 @@ export declare class UniversalLoggerConfig implements ConfigInterface {
     ttl?: ConfigInterface['ttl'];
     export?: ConfigInterface['export'];
     alerts?: ConfigInterface['alerts'];
+    batch?: ConfigInterface['batch'];
     constructor(config?: ConfigInterface);
     getLoggingConfig(): Required<Pick<NonNullable<ConfigInterface['logging']>, 'level' | 'serviceName' | 'environment' | 'version' | 'enableConsole' | 'enableFile' | 'logDirectory' | 'maxFileSize' | 'maxFiles'>>;
-    getApiConfig(): Required<Pick<NonNullable<ConfigInterface['api']>, 'enabled' | 'logRequests' | 'logResponses' | 'logHeaders' | 'logBody' | 'logQuery' | 'sensitiveHeaders' | 'excludePaths' | 'includePaths' | 'maxBodySize' | 'slowRequestThreshold'>>;
+    getApiConfig(): Required<Pick<NonNullable<ConfigInterface['api']>, 'enabled' | 'logRequests' | 'logResponses' | 'logHeaders' | 'logBody' | 'logBodyMode' | 'logResponseBodyMode' | 'logQuery' | 'sensitiveHeaders' | 'excludePaths' | 'includePaths' | 'maxBodySize' | 'slowRequestThreshold'>>;
     getSecurityConfig(): Required<Pick<NonNullable<ConfigInterface['security']>, 'enabled' | 'trackAuthEvents' | 'trackFailedLogins' | 'trackSuspiciousActivity' | 'ipWhitelist' | 'ipBlacklist'>>;
     isFeatureEnabled(feature: 'api' | 'performance' | 'security' | 'business' | 'dashboard'): boolean;
 }

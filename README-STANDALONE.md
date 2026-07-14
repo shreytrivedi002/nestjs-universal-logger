@@ -1,8 +1,8 @@
 # NestJS Universal Logger v2 — Standalone API
 
-This document covers the **standalone** API that the package actually exports and recommends.
+API reference for the **standalone** exports this package recommends.
 
-For install, module setup, TTL, and scope limits (no dashboard / alerts / export), see the main [README.md](./README.md).
+For install, module setup, Redis/memory batching, body modes, TTL, and scope limits, see the main [README.md](./README.md).
 
 ## Recommended module
 
@@ -20,8 +20,8 @@ On `forRoot` / `forService`, Nest registers:
 
 | Provider | Role |
 |----------|------|
-| `UniversalLoggerClient` | Inject this for application/manual logging |
-| `UniversalLoggerFactory` | Creates per-service loggers |
+| `UniversalLoggerClient` | Inject for application / manual logging |
+| `UniversalLoggerFactory` | Creates per-service loggers; flushes batch buffers on destroy |
 | `UniversalLoggerInterceptor` | Bound as `APP_INTERCEPTOR` |
 | `UniversalLoggerExceptionFilter` | Bound as `APP_FILTER` |
 
@@ -55,7 +55,7 @@ export class OrdersService {
 
 ## Client / standalone methods
 
-All methods below are available on `UniversalLoggerClient` (and the underlying `UniversalLoggerStandalone`).
+All methods below are available on `UniversalLoggerClient` (and the underlying `UniversalLoggerStandalone`, unless noted).
 
 ### Core
 
@@ -119,13 +119,25 @@ All methods below are available on `UniversalLoggerClient` (and the underlying `
 | `getPerformanceMetrics(hours?)` | Performance aggregates |
 | `cleanupOldLogs(daysToKeep?)` | Manual delete older than N days |
 
+### Batch buffer (on `UniversalLoggerStandalone`)
+
+| Method | Description |
+|--------|-------------|
+| `getBatchTransport()` | `'memory'` \| `'redis'` \| `'none'` |
+| `flush()` | Flush current buffer to Mongo |
+| `destroy()` | Stop timers, drain buffer, close Redis if used |
+
+`UniversalLoggerFactory` calls `destroy()` on all loggers during Nest `onModuleDestroy`.
+
 ## Automatic HTTP behavior
 
 `UniversalLoggerInterceptor`:
 
 - Assigns / propagates `x-request-id`
-- Logs request start (method, URL, IP, UA, sanitized headers/query/body)
-- Logs success or error completion with duration and status
+- Respects `excludePaths`
+- Logs request start (bodies only when `logBodyMode: 'all'`)
+- Logs success / error completion with duration and status
+- Attaches bodies per `logBodyMode` / `logResponseBodyMode` and `maxBodySize`
 - Categorizes paths heuristically (`AUTH`, `PAYMENT`, `ADMIN`, `HEALTH`, etc.)
 
 `UniversalLoggerExceptionFilter`:
@@ -133,6 +145,46 @@ All methods below are available on `UniversalLoggerClient` (and the underlying `
 - Logs uncaught exceptions with stack / context
 
 Auth, business, and many security events are **not** inferred automatically — call the client.
+
+## Batching deep dive
+
+```text
+Request / manual log
+        │
+        ▼
+  enqueue (non-blocking)
+        │
+   ┌────┴────┐
+   │ Redis   │  if configured + connectable + ioredis installed
+   │  list   │
+   └────┬────┘
+        │ else
+   ┌────┴────┐
+   │ Memory  │  bounded array (default / fallback)
+   │ buffer  │
+   └────┬────┘
+        │ every flushIntervalMs or maxBatchSize
+        ▼
+  MongoDB insertMany → logs_{service}
+```
+
+### Transport rules
+
+| Setting | Result |
+|---------|--------|
+| No `batch.redis` | Memory |
+| `transport: 'memory'` | Memory |
+| `transport: 'auto'` or `'redis'` + reachable Redis | Redis |
+| Redis down / no `ioredis` | Memory fallback (logged warning) |
+| `batch.enabled: false` | Direct `create()` per log |
+
+### Redis key
+
+```text
+{keyPrefix}:batch:{sanitizedServiceName}
+```
+
+Default prefix: `nestjs-universal-logger`
 
 ## Collections
 
@@ -142,8 +194,40 @@ logs_{sanitizedServiceName}
 
 `environment` is a document field, not part of the collection name.
 
+## Body helpers (exported)
+
+| Helper | Purpose |
+|--------|---------|
+| `resolveRequestBodyMode(api)` | Resolve `'none' \| 'all' \| 'errors'` |
+| `resolveResponseBodyMode(api)` | Same for responses |
+| `shouldLogBody(mode, statusCode?, isErrorPath?)` | Whether to attach a body |
+| `prepareLogBody(body, maxBodySize?)` | Sanitize + size-cap / omit |
+
 ## Scope reminder
 
-Implemented: Nest logging module, Mongo persistence, TTL, interceptor/filter, manual helpers, query helpers.
+**Implemented**
 
-**Not** implemented: dashboard UI, alerts, email/webhooks, CSV/Excel export, archive-based retention. Prefer `ttl` and/or `cleanupOldLogs` for storage management.
+- Nest standalone module, interceptor, exception filter
+- Mongo persistence with per-service collections
+- Batched writes: **Redis or in-memory**, with auto-fallback
+- Body modes + large-body omission
+- TTL, manual helpers, query helpers
+
+**Not implemented**
+
+- Dashboard UI, alerts, email/webhooks, CSV/Excel export, archive retention
+
+Prefer `ttl` and/or `cleanupOldLogs` for storage management.
+
+### Defaults
+
+| Option | Default |
+|--------|---------|
+| `api.logBodyMode` | `errors` |
+| `api.logResponseBodyMode` | same as `logBodyMode` |
+| `api.maxBodySize` | `1024` |
+| `batch.enabled` | `true` |
+| `batch.transport` | `auto` |
+| `batch.flushIntervalMs` | `250` |
+| `batch.maxBatchSize` | `100` |
+| `batch.maxBufferSize` | `2000` |

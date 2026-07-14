@@ -14,6 +14,7 @@ class UniversalLoggerConfig {
         this.ttl = config.ttl;
         this.export = config.export;
         this.alerts = config.alerts;
+        this.batch = config.batch;
     }
     getLoggingConfig() {
         return {
@@ -35,6 +36,10 @@ class UniversalLoggerConfig {
             logResponses: this.api?.logResponses !== false,
             logHeaders: this.api?.logHeaders !== false,
             logBody: this.api?.logBody !== false,
+            logBodyMode: this.api?.logBodyMode || (this.api?.logBody === false ? 'none' : this.api?.logBody === true ? 'all' : 'errors'),
+            logResponseBodyMode: this.api?.logResponseBodyMode ||
+                this.api?.logBodyMode ||
+                (this.api?.logBody === false ? 'none' : this.api?.logBody === true ? 'all' : 'errors'),
             logQuery: this.api?.logQuery !== false,
             sensitiveHeaders: this.api?.sensitiveHeaders || [
                 'authorization',

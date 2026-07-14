@@ -1,7 +1,7 @@
 {
   "name": "nestjs-universal-logger-v2",
   "version": "3.5.1",
-  "description": "NestJS logging package with automatic HTTP capture, per-service MongoDB collections, and TTL-based cleanup",
+  "description": "NestJS logging package with automatic HTTP capture, Redis/memory batch writes to per-service MongoDB collections, and TTL cleanup",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -18,7 +18,10 @@
     "exception-filter",
     "per-service",
     "ttl",
-    "structured-logging"
+    "structured-logging",
+    "batch",
+    "redis",
+    "ioredis"
   ],
   "author": "Your Name",
   "license": "MIT",
@@ -43,7 +46,16 @@
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/mongoose": "^10.0.4",
-    "rxjs": "^7.0.0"
+    "rxjs": "^7.0.0",
+    "ioredis": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "ioredis": "^5.0.0"
   },
   "files": [
     "dist/**/*",

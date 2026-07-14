@@ -35,13 +35,74 @@ export interface UniversalLoggerConfig {
     logRequests?: boolean;
     logResponses?: boolean;
     logHeaders?: boolean;
+    /**
+     * Legacy flag. Prefer `logBodyMode`.
+     * - true  → same as logBodyMode: 'all'
+     * - false → same as logBodyMode: 'none'
+     */
     logBody?: boolean;
+    /**
+     * Controls when request/response bodies are attached to API logs.
+     * - 'none'   → never log bodies
+     * - 'all'    → log bodies on all requests (still size-capped)
+     * - 'errors' → log bodies only for failed requests (status >= 400)
+     * @default 'errors'
+     */
+    logBodyMode?: 'none' | 'all' | 'errors';
+    /**
+     * Same modes as `logBodyMode`, applied to response bodies.
+     * Falls back to `logBodyMode` when unset.
+     */
+    logResponseBodyMode?: 'none' | 'all' | 'errors';
     logQuery?: boolean;
     sensitiveHeaders?: string[];
     excludePaths?: string[];
     includePaths?: string[];
+    /** Max serialized body size in bytes. Larger bodies are omitted. @default 1024 */
     maxBodySize?: number;
     slowRequestThreshold?: number;
+  };
+
+  /**
+   * Batching for MongoDB writes.
+   * Prefer Redis when configured and reachable; otherwise use an in-memory buffer.
+   */
+  batch?: {
+    /** Enable buffered insertMany writes. @default true */
+    enabled?: boolean;
+    /** Flush when buffer reaches this many docs. @default 100 */
+    maxBatchSize?: number;
+    /** Flush interval in milliseconds. @default 250 */
+    flushIntervalMs?: number;
+    /**
+     * Hard cap on buffered docs. When full, oldest entries are dropped
+     * so memory stays bounded. @default 2000
+     */
+    maxBufferSize?: number;
+    /**
+     * Buffer transport:
+     * - 'auto'   → use Redis when `redis` config is set and connectable, else memory (default)
+     * - 'redis'  → try Redis; fall back to memory if unavailable
+     * - 'memory' → always use in-process memory buffer
+     */
+    transport?: 'auto' | 'redis' | 'memory';
+    /**
+     * Redis connection used for the batch buffer (optional).
+     * Requires the `ioredis` package to be installed in the host app.
+     */
+    redis?: {
+      /** Full connection URL, e.g. redis://localhost:6379/0 */
+      url?: string;
+      host?: string;
+      port?: number;
+      password?: string;
+      username?: string;
+      db?: number;
+      /** Key prefix for the log list. @default 'nestjs-universal-logger' */
+      keyPrefix?: string;
+      /** Connect/ping timeout in ms. @default 2000 */
+      connectTimeoutMs?: number;
+    };
   };
 
   // Performance Configuration
